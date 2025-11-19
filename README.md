@@ -3,7 +3,7 @@
 简洁的 AI 媒资生成与管理示例：后端 FastAPI + SQLAlchemy，前端 Vue 3 + Pinia + Vite。涵盖登录、任务、资源、提供商、管理员、钱包与偏好设置，采用 HTTP 轮询与静态文件存储。
 
 ## 特性
-- 后端 API：`/auth`、`/providers`、`/jobs`、`/assets`、`/v1/images`、`/v1/videos`、`/billing`、`/preferences`、`/admin`、`/metrics`、`/health`
+- 后端 API（统一前缀 `/api`）：`/api/auth`、`/api/providers`、`/api/jobs`、`/api/assets`、`/api/v1/images`、`/api/v1/videos`、`/api/billing`、`/api/preferences`、`/api/admin`、`/api/metrics`、`/api/health`
 - 速率限制与跨域：中间件配置与 CORS 列表（参考 `app/main.py` 与 `app/config.py`）
 - 媒资静态服务：`/media` 映射到 `storage/media/`
 
@@ -64,6 +64,7 @@
   - 如需自定义，使用 `--env-file .env` 或 `-e DATABASE_URL=...` 覆盖。
   - Linux 下如需连接宿主机数据库，可添加 `--add-host=host.docker.internal:host-gateway` 或改用宿主机 IP。
   - 媒资目录挂载到 `storage/media/` 保持持久化。
+  - 前端打包目录 `lightsource-vue/dist` 下的静态资源通过后端挂载：根路径 `/` 为首页，`/assets/*` 提供静态文件。
 
 ## 环境变量
 - 必需：`DATABASE_URL`、`STORAGE_BASE`、`CORS_ORIGINS`、`JWT_SECRET`、`JWT_ACCESS_MINUTES`、`JWT_REFRESH_MINUTES`、`RATE_LIMIT_PER_MINUTE`、`BURST_LIMIT`

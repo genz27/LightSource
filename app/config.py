@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     jwt_access_minutes: int = Field(..., env="JWT_ACCESS_MINUTES")
     jwt_refresh_minutes: int = Field(..., env="JWT_REFRESH_MINUTES")
 
+    frontend_dist: str | None = Field(None, env="FRONTEND_DIST")
     
 
     @property

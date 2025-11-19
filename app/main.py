@@ -10,7 +10,8 @@ import asyncio
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Request
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, FileResponse, RedirectResponse
+from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
@@ -65,23 +66,37 @@ def create_app() -> FastAPI:
         metrics.requests_total += 1
         return await call_next(request)
 
-    app.include_router(auth.router, prefix="/auth", tags=["auth"])
-    app.include_router(providers.router, prefix="/providers", tags=["providers"])
-    app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
-    app.include_router(assets.router, prefix="/assets", tags=["assets"])
-    app.include_router(images.router, prefix="/v1", tags=["images"])
-    app.include_router(videos.router, prefix="/v1", tags=["videos"])
-    app.include_router(billing.router, prefix="/billing", tags=["billing"])
-    app.include_router(preferences_api.router, prefix="/preferences", tags=["preferences"]) 
-    app.include_router(admin.router, prefix="/admin", tags=["admin"]) 
+    app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+    app.include_router(providers.router, prefix="/api/providers", tags=["providers"])
+    app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
+    app.include_router(assets.router, prefix="/api/assets", tags=["assets"])
+    app.include_router(images.router, prefix="/api/v1", tags=["images"])
+    app.include_router(videos.router, prefix="/api/v1", tags=["videos"])
+    app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
+    app.include_router(preferences_api.router, prefix="/api/preferences", tags=["preferences"]) 
+    app.include_router(admin.router, prefix="/api/admin", tags=["admin"]) 
 
     app.mount("/media", StaticFiles(directory=settings.storage_base, check_dir=False), name="media")
 
-    @app.get("/health", tags=["health"])
+    frontend_root = settings.frontend_dist or "lightsource-vue/dist"
+    app.mount("/assets", StaticFiles(directory=Path(frontend_root) / "assets", check_dir=False), name="assets")
+    try:
+        app.mount("/favicon.ico", StaticFiles(directory=frontend_root, check_dir=False), name="favicon")
+    except Exception:
+        pass
+
+    @app.get("/", tags=["home"], include_in_schema=False)
+    async def home():
+        try:
+            return FileResponse(Path(frontend_root) / "index.html")
+        except Exception:
+            return RedirectResponse(url="/docs")
+
+    @app.get("/api/health", tags=["health"])
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    @app.get("/metrics", tags=["metrics"])
+    @app.get("/api/metrics", tags=["metrics"])
     async def get_metrics() -> dict:
         return metrics.snapshot()
 
@@ -107,6 +122,15 @@ def create_app() -> FastAPI:
                         await tq.enqueue(j.id)
         except Exception:
             pass
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa_fallback(full_path: str):
+        if full_path.startswith("api/") or full_path.startswith("media/") or full_path.startswith("docs") or full_path.startswith("redoc") or full_path.startswith("openapi"):
+            return JSONResponse({"error": "not found"}, status_code=404)
+        try:
+            return FileResponse(Path(frontend_root) / "index.html")
+        except Exception:
+            return RedirectResponse(url="/docs")
 
     return app
 

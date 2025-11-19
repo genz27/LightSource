@@ -1,7 +1,18 @@
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
 
-const base = import.meta.env.VITE_API_BASE_URL || ''
+function computeRoot(): string {
+  const envBase = import.meta.env.VITE_API_BASE_URL
+  if (envBase && envBase.trim()) return envBase.replace(/\/$/, '')
+  const { protocol, hostname, port } = location
+  const apiPort = '8000'
+  const root = (port && port !== '') ? `${protocol}//${hostname}:${port}` : `${protocol}//${hostname}`
+  if (port === apiPort) return root
+  return `${protocol}//${hostname}:${apiPort}`
+}
+const ROOT = computeRoot()
+const API_PREFIX = '/api'
+const apiUrl = (path: string) => `${ROOT}${API_PREFIX}${path}`
 
 async function request(path: string, init: RequestInit = {}) {
   const auth = useAuthStore()
@@ -15,7 +26,7 @@ async function request(path: string, init: RequestInit = {}) {
     if (auth.token) {
       headers['Authorization'] = `Bearer ${auth.token}`
     }
-    const resp = await fetch(`${base}${path}`, { ...init, headers })
+    const resp = await fetch(apiUrl(path), { ...init, headers })
     const text = await resp.text()
     const data = text ? JSON.parse(text) : null
     return { resp, data }
@@ -65,7 +76,7 @@ async function requestText(path: string, init: RequestInit = {}) {
       ...(init.headers as Record<string, string> || {}),
     }
     if (auth.token) headers['Authorization'] = `Bearer ${auth.token}`
-    const resp = await fetch(`${base}${path}`, { ...init, headers })
+    const resp = await fetch(apiUrl(path), { ...init, headers })
     const text = await resp.text()
     return { resp, text }
   }
