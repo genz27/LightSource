@@ -66,6 +66,22 @@
   - 媒资目录挂载到 `storage/media/` 保持持久化。
   - 前端打包目录 `lightsource-vue/dist` 下的静态资源通过后端挂载：根路径 `/` 为首页，`/assets/*` 提供静态文件。
 
+## 前端与后端路由约定
+- 前端：根路径 `/` 渲染打包后的 `index.html`；路由如 `/assets`、`/generator`、`/settings`。
+- 静态：构建资源位于 `/assets/*`（由后端挂载）。
+- 后端 API：统一前缀 `/api`，例如：
+  - 认证：`/api/auth/*`
+  - 资产：`/api/assets/*`
+  - 任务：`/api/jobs/*`
+  - 生成：`/api/v1/images`、`/api/v1/videos`
+  - 管理：`/api/admin/*`
+  - 指标与健康：`/api/metrics`、`/api/health`
+
+## 前端 API 地址配置
+- 默认自动跟随主机：`protocol://hostname:8000`，请求统一加 `/api` 前缀。
+- 如需跨域或不同端口/域名，在前端设置 `VITE_API_BASE_URL`（例如 `https://api.example.com`）。
+- 代码位置：`lightsource-vue/src/api/client.ts`。
+
 ## 环境变量
 - 必需：`DATABASE_URL`、`STORAGE_BASE`、`CORS_ORIGINS`、`JWT_SECRET`、`JWT_ACCESS_MINUTES`、`JWT_REFRESH_MINUTES`、`RATE_LIMIT_PER_MINUTE`、`BURST_LIMIT`
 - 可选：`PUBLIC_API_KEY`、`EXT_IMAGE_UPLOAD_AUTH_KEY`
