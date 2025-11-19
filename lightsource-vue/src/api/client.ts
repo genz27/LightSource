@@ -33,6 +33,11 @@ async function apiUrl(path: string): Promise<string> {
   return `${b}${API_PREFIX}${path}`
 }
 
+function addCacheBuster(url: string): string {
+  const sep = url.includes('?') ? '&' : '?'
+  return `${url}${sep}_=${Date.now()}`
+}
+
 async function request(path: string, init: RequestInit = {}) {
   const auth = useAuthStore()
   const doFetch = async () => {
@@ -42,10 +47,14 @@ async function request(path: string, init: RequestInit = {}) {
     if (!headers['Content-Type'] && init.body && !(init.body instanceof FormData)) {
       headers['Content-Type'] = 'application/json'
     }
+    headers['Cache-Control'] = 'no-cache'
+    headers['Pragma'] = 'no-cache'
     if (auth.token) {
       headers['Authorization'] = `Bearer ${auth.token}`
     }
-    const url = await apiUrl(path)
+    const method = (init.method || 'GET').toString().toUpperCase()
+    let url = await apiUrl(path)
+    if (method === 'GET') url = addCacheBuster(url)
     const resp = await fetch(url, { ...init, headers })
     const text = await resp.text()
     const data = text ? JSON.parse(text) : null
@@ -95,8 +104,12 @@ async function requestText(path: string, init: RequestInit = {}) {
     const headers: Record<string, string> = {
       ...(init.headers as Record<string, string> || {}),
     }
+    headers['Cache-Control'] = 'no-cache'
+    headers['Pragma'] = 'no-cache'
     if (auth.token) headers['Authorization'] = `Bearer ${auth.token}`
-    const url = await apiUrl(path)
+    const method = (init.method || 'GET').toString().toUpperCase()
+    let url = await apiUrl(path)
+    if (method === 'GET') url = addCacheBuster(url)
     const resp = await fetch(url, { ...init, headers })
     const text = await resp.text()
     return { resp, text }
