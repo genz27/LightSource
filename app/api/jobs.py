@@ -145,7 +145,16 @@ async def get_job_status(
         current_user is None or job.owner_id != current_user.id
     ):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
-    runtime_job = store.get_job(job_id) or job
+    mem_job = store.get_job(job_id)
+    try:
+        runtime_job = mem_job if (mem_job and (mem_job.updated_at >= job.updated_at)) else job
+        if mem_job and (job.updated_at > mem_job.updated_at or job.status != mem_job.status or job.progress != mem_job.progress):
+            try:
+                store.update_job(job.id, status=job.status, progress=job.progress, asset_id=job.asset_id, error=job.error, params=job.params)
+            except Exception:
+                pass
+    except Exception:
+        runtime_job = mem_job or job
     extras = getattr(job.params, "extras", {}) or {}
     provider_resp_existing = extras.get("provider_response") or {}
     provider_raw_existing = provider_resp_existing.get("raw") or {}
