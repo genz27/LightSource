@@ -4,11 +4,7 @@ import router from '@/router'
 function computeRoot(): string {
   const envBase = import.meta.env.VITE_API_BASE_URL
   if (envBase && envBase.trim()) return envBase.replace(/\/$/, '')
-  const { protocol, hostname, port } = location
-  const apiPort = '8000'
-  const root = (port && port !== '') ? `${protocol}//${hostname}:${port}` : `${protocol}//${hostname}`
-  if (port === apiPort) return root
-  return `${protocol}//${hostname}:${apiPort}`
+  return location.origin
 }
 const ROOT = computeRoot()
 const API_PREFIX = '/api'
