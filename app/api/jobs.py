@@ -5,6 +5,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from starlette.responses import JSONResponse
+import datetime as dt
 from app.api.utils import api_error
 
 from app.deps.auth import get_current_user_optional, get_current_user
@@ -222,6 +223,23 @@ async def get_job_status(
                 await update_job_fields(session, job.id, status=JobStatus.FAILED)
         except Exception:
             pass
+    fallback_progress = None
+    try:
+        from app.services.metrics import metrics
+        start = metrics.started_at.get(job.id)
+        if start:
+            elapsed = (dt.datetime.utcnow() - start).total_seconds()
+            steps = [5, 15, 30, 50, 70, 85, 95]
+            idx = int(elapsed / 1.2)
+            if idx < 0:
+                idx = 0
+            if idx >= len(steps):
+                idx = len(steps) - 1
+            fallback_progress = steps[idx]
+            if status_ext == "queued" and fallback_progress:
+                status_ext = "processing"
+    except Exception:
+        pass
     result_url = None
     if job.asset_id:
         from app.services.persistence import list_assets_db
@@ -320,7 +338,7 @@ async def get_job_status(
             "image_id": job.id,
             "task_id": task_id,
             "status": status_ext,
-            "progress": float(runtime_job.progress),
+            "progress": float(provider_progress if isinstance(provider_progress, (int, float)) else (runtime_job.progress or fallback_progress or 0)),
             "model": job.model,
             "prompt": job.prompt,
             "result_url": result_url,
