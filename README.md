@@ -35,6 +35,31 @@ graph LR
 - `scripts/` 初始化与工具脚本
 - `alembic/` 数据库迁移（已忽略）
 
+## 接口层（Providers）
+- 位置：`app/interface/`，封装与外部模型/视频服务的交互，统一调用与返回结构。
+- 抽象协议：`Provider` 定义 `generate(request, job)`（`app/interface/base.py:8–10`）。
+- 适配器注册：
+  - `resolve_adapter(name)` 返回具体适配器（`app/interface/registry.py:96–105`）。
+  - `QwenAdapter` 图像生成/编辑（`app/interface/registry.py:11–16`）。
+  - `FluxAdapter` 图像生成（`app/interface/registry.py:19–23`）。
+  - `MajicFlusAdapter` 图像生成（`app/interface/registry.py:24–27`）。
+  - `Sora2Adapter` 视频创建/查询/生成（`app/interface/registry.py:29–93`）。
+- Qwen（ModelScope）：
+  - 模型映射 `MODEL_MAP`（`app/interface/qwen.py:16–19`）。
+  - 文生图 `generate_image`（`app/interface/qwen.py:54–115`）。
+  - 以图编辑 `edit_image`（`app/interface/qwen.py:118–186`）。
+- Flux（ModelScope）：文生图 `generate_image`（`app/interface/flux.py:32–56`）。
+- MajicFlus（ModelScope）：文生图 `generate_image`（`app/interface/majicflus.py:32–56`）。
+- Sora2（视频）：
+  - 创建视频 `create_video`（`app/interface/sora2.py:48–92`）。
+  - 查询视频 `get_video`（`app/interface/sora2.py:95–129`）。
+  - 文生视频 `generate_video`（`app/interface/sora2.py:132–167`）。
+  - 以图生视频 `image_to_video`（`app/interface/sora2.py:170–205`）。
+- 生成编排：在 `app/services/generation.py` 中按 Job 类型调用适配器：
+  - 解析适配器并分发任务（`app/services/generation.py:49–51, 67–88`）。
+  - Sora2 视频创建与元信息写入（`app/services/generation.py:100–127`）。
+  - 查询视频详情并填充结果（`app/services/generation.py:163–184`）。
+
 ## 快速开始
 - 后端
   - `python -m venv .venv && .venv\\Scripts\\activate`
