@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LightSource Generator Demo</title>
+  <style>
+    :root {
+      --bg: #0c0c0f;
+      --panel: #161618;
+      --panel-soft: #1d1d20;
+      --border: #242428;
+      --text: #f5f5f5;
+      --muted: #a7a8ad;
+      --accent: #f3d9a4;
+      --pill: #1f1f23;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+    * { box-sizing: border-box; }
+    a { color: inherit; text-decoration: none; }
+    body { margin: 0; min-height: 100vh; font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+    .app { max-width: 1200px; margin: 0 auto; padding: 16px 18px 28px; }
+    header.top-bar { display: flex; justify-content: space-between; align-items: center; background: #0b0b0d; border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow); }
+    .brand { font-weight: 700; letter-spacing: 0.3px; }
+    .main-nav, .actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .ghost { color: var(--muted); font-size: 13px; padding: 6px 10px; border-radius: 10px; background: transparent; border: 1px solid transparent; }
+    .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--panel-soft); border: 1px solid var(--border); display: grid; place-items: center; font-size: 12px; color: var(--muted); font-weight: 700; }
+    .pill { border-radius: 999px; border: 1px solid var(--border); background: var(--pill); color: var(--text); padding: 8px 14px; font-size: 13px; cursor: pointer; }
+    .pill:hover { border-color: #2f2f33; background: #25252a; }
+    .pill.active { border-color: var(--accent); background: var(--accent); color: #1a1a1a; font-weight: 700; }
+    .pill.accent { background: var(--accent); color: #1a1a1a; border: none; font-weight: 700; }
+    main { display: grid; gap: 16px; margin-top: 16px; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); }
+    h2 { margin: 0 0 6px; font-size: 18px; letter-spacing: 0.2px; }
+    p { margin: 0 0 10px; color: var(--muted); line-height: 1.6; }
+    label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 13px; }
+    textarea, select { width: 100%; background: #111116; color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+    input[type="file"].file-input { width: 100%; background: #111116; color: var(--muted); border: 1px dashed var(--border); border-radius: 12px; padding: 12px; cursor: pointer; }
+    input[type="file"].file-input::-webkit-file-upload-button { background: var(--panel-soft); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 8px 12px; cursor: pointer; }
+    input[type="file"].file-input:hover { border-color: #2f2f33; }
+    textarea { min-height: 120px; resize: vertical; }
+    .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .fields { display: grid; gap: 12px; }
+    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+    .radio-row { display: flex; gap: 10px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
+    .radio-pill-group { display: flex; gap: 10px; flex-wrap: wrap; }
+    .radio-pill { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--pill); color: var(--text); cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease; }
+    .radio-pill input { appearance: none; width: 14px; height: 14px; border: 1px solid var(--border); border-radius: 50%; background: #0f0f12; display: inline-grid; place-items: center; }
+    .radio-pill input::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: transparent; }
+    .radio-pill input:checked { border-color: var(--accent); }
+    .radio-pill input:checked::after { background: var(--accent); }
+    .radio-pill:hover { border-color: #2f2f33; background: #1c1c21; }
+    .helper { display: inline-flex; gap: 6px; align-items: center; padding: 6px 10px; border: 1px solid var(--border); border-radius: 10px; background: #1b1b1f; color: var(--muted); font-size: 12px; }
+    .preview-box { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #0f0f12; min-height: 200px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02); }
+    .preview-col { display: grid; gap: 10px; }
+    .status { display: inline-flex; gap: 6px; align-items: center; padding: 6px 10px; border-radius: 10px; background: #1f2529; border: 1px solid var(--border); color: var(--text); font-size: 12px; }
+    .progress { height: 10px; background: #111116; border-radius: 999px; border: 1px solid var(--border); overflow: hidden; }
+    .progress span { display: block; height: 100%; background: var(--accent); width: 52%; }
+    .history { display: grid; gap: 8px; }
+    .history-item { background: #121218; border: 1px solid var(--border); border-radius: 10px; padding: 10px; display: grid; gap: 6px; }
+    footer.site-footer { margin-top: 24px; padding: 18px 0 8px; border-top: 1px solid var(--border); color: var(--muted); display: grid; gap: 8px; font-size: 13px; }
+    .footer-links { display: flex; gap: 12px; flex-wrap: wrap; }
+    @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="top-bar">
+      <div class="brand">LightSource</div>
+      <nav class="main-nav">
+        <a class="pill" href="pika-style-demo.html">Index</a>
+        <a class="pill active" href="generator-demo.html">Generators</a>
+        <a class="pill" href="assets-demo.html">Library</a>
+        <a class="pill" href="dashboard-demo.html">Dashboard</a>
+      </nav>
+      <div class="actions">
+        <a class="ghost" href="auth-demo.html" aria-label="Register account">Register</a>
+        <a class="pill accent" href="auth-demo.html">Login</a>
+        <a class="avatar" href="settings-demo.html" aria-label="User settings">LS</a>
+        <button class="pill" id="logout-btn" style="display:none;">Logout</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="layout">
+        <section class="panel">
+          <h2>Generator controls</h2>
+          <p>Pick a model, write a prompt, and choose video orientation when using sora2-video. Image params stay available for reuse.</p>
+          <div class="fields">
+            <div class="row">
+              <div>
+                <label for="mode">Mode</label>
+                <select id="mode">
+                  <option value="image">Text to image (qwen-image)</option>
+                  <option value="text-video">Text to video (sora2-video)</option>
+                  <option value="image-video">Image to video (sora2-video)</option>
+                </select>
+              </div>
+              <div>
+                <label for="model">Model</label>
+                <select id="model">
+                  <option selected>Select model matching the mode</option>
+                  <option>qwen-image (text to image)</option>
+                  <option>sora2-video (text to video)</option>
+                  <option>sora2-video (image to video)</option>
+                </select>
+                <small style="color:var(--muted);">Pick the model that aligns with the selected mode.</small>
+              </div>
+            </div>
+
+            <div>
+              <label for="prompt">Prompt</label>
+              <textarea id="prompt" placeholder="Cinematic neon alley, rain reflections, ultrawide frame"></textarea>
+            </div>
+
+            <div class="row" data-image-options>
+              <div>
+                <label>Image options (text to image)</label>
+                <select id="image-size">
+                  <option value="1024x1024">Size: 1024 x 1024</option>
+                  <option value="768x1344">Size: 768 x 1344</option>
+                  <option value="1344x768">Size: 1344 x 768</option>
+                </select>
+              </div>
+              <div>
+                <label>Style preset (image only)</label>
+                <select id="style-preset">
+                  <option value="cinematic">Cinematic</option>
+                  <option value="portrait">Portrait</option>
+                  <option value="product">Product</option>
+                </select>
+              </div>
+              <div>
+                <label>Guidance (image only)</label>
+                <select id="guidance">
+                  <option value="7.5">7.5</option>
+                  <option value="6.0">6.0</option>
+                  <option value="9.0">9.0</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row" data-image-video-upload>
+              <div>
+                <label for="image-upload">Source image (image to video)</label>
+                <input type="file" id="image-upload" class="file-input" accept="image/*" />
+                <small style="color:var(--muted);">JPG/PNG/WebP · Ideal: 1024x1024 · Used only for image to video.</small>
+              </div>
+            </div>
+
+            <div class="row" data-video-options>
+              <div>
+                <label>Video options (video modes)</label>
+                <div class="radio-pill-group">
+                  <label class="radio-pill"><input type="radio" name="orientation" value="landscape" checked /> Landscape</label>
+                  <label class="radio-pill"><input type="radio" name="orientation" value="portrait" /> Portrait</label>
+                </div>
+                <small style="color:var(--muted);">Applies to Text to video or Image to video (sora2-video).</small>
+              </div>
+            </div>
+
+            <div class="actions" style="gap:12px;flex-wrap:wrap;justify-content:center;">
+              <button id="submit-job" type="button" class="pill accent" style="padding:12px 20px;font-size:14px;">Submit job</button>
+              <button id="cancel-job" type="button" class="pill" style="padding:12px 20px;font-size:14px;" disabled>Cancel job</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Preview (mode-aware)</h2>
+            <div class="preview-col">
+              <div style="min-height:100%;display:grid;grid-template-rows:auto 1fr;gap:10px;">
+                <div>
+                  <label>Current preview</label>
+                </div>
+                <div class="preview-box" style="min-height:320px;"></div>
+              </div>
+              <div class="status">Idle - waiting for job</div>
+              <div class="progress" style="margin:10px 0 6px;"><span></span></div>
+              <small style="color:var(--muted);">Sampling frame 14/20 (updates when mode/model changes)</small>
+            </div>
+        </section>
+      </div>
+
+      <section class="panel">
+        <h2>History</h2>
+        <div class="history">
+          <div class="history-item">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;">
+              <span>job_231 - qwen-image</span><span style="color:var(--muted);">Completed</span>
+            </div>
+            <div style="color:var(--muted);">Prompt: Neon alley with rain | Public: yes</div>
+          </div>
+          <div class="history-item">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;">
+              <span>job_230 - sora2-video</span><span style="color:var(--muted);">Running</span>
+            </div>
+            <div style="color:var(--muted);">Prompt: Night city hyperlapse | Orientation: landscape</div>
+          </div>
+          <div class="history-item">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;">
+              <span>job_229 - qwen-image</span><span style="color:var(--muted);">Queued</span>
+            </div>
+            <div style="color:var(--muted);">Prompt: Forest time-lapse | Resolution: 1024x1024</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-links">
+        <span>Docs</span><span>Status</span><span>Security</span><span>Contact</span>
+      </div>
+      <div class="footer-links">
+        <span>(c) 2025 LightSource</span>
+      </div>
+    </footer>
+  </div>
+  <script>
+    (() => {
+      const modeSelect = document.getElementById("mode");
+      const modelSelect = document.getElementById("model");
+      const promptInput = document.getElementById("prompt");
+      const videoOptions = document.querySelector("[data-video-options]");
+      const imageOptions = document.querySelector("[data-image-options]");
+      const imageVideoUpload = document.querySelector("[data-image-video-upload]");
+      const imageSizeSelect = document.getElementById("image-size");
+      const stylePresetSelect = document.getElementById("style-preset");
+      const guidanceSelect = document.getElementById("guidance");
+      const imageUploadInput = document.getElementById("image-upload");
+      const submitButton = document.getElementById("submit-job");
+      const cancelButton = document.getElementById("cancel-job");
+      const statusEl = document.querySelector(".status");
+      const progressBar = document.querySelector(".progress span");
+
+      let currentJobId = null;
+      let pollTimer = null;
+
+      const modelGroups = {
+        image: [{ value: "qwen-image", label: "qwen-image (text to image)" }],
+        "text-video": [
+          { value: "sora2-video", label: "sora2-video (text to video)" },
+        ],
+        "image-video": [
+          { value: "sora2-video", label: "sora2-video (image to video)" },
+        ],
+      };
+
+      const resetModels = (mode) => {
+        modelSelect.innerHTML =
+          '<option value="">Select model matching the mode</option>';
+        (modelGroups[mode] || []).forEach((opt) => {
+          const option = document.createElement("option");
+          option.value = opt.value;
+          option.textContent = opt.label;
+          modelSelect.appendChild(option);
+        });
+        modelSelect.selectedIndex = 0;
+      };
+
+      const syncView = () => {
+        const mode = modeSelect.value;
+        resetModels(mode);
+        videoOptions.style.display = mode === "image" ? "none" : "";
+        imageOptions.style.display = mode === "image" ? "" : "none";
+        imageVideoUpload.style.display = mode === "image-video" ? "" : "none";
+      };
+
+      const mapModeToKind = (mode) => {
+        switch (mode) {
+          case "image":
+            return "text_to_image";
+          case "text-video":
+            return "text_to_video";
+          case "image-video":
+            return "image_to_video";
+          default:
+            return "text_to_image";
+        }
+      };
+
+      const getSelectedOrientation = () => {
+        const checked = document.querySelector('input[name="orientation"]:checked');
+        return checked ? checked.value : null;
+      };
+
+      const getAuthToken = () => {
+        // 简单约定：从 localStorage 中读取 access_token；后续可与真实登录页对齐键名。
+        return (
+          window.localStorage.getItem("lightsource_access_token") ||
+          window.localStorage.getItem("access_token") ||
+          ""
+        );
+      };
+
+      const pollStatus = (jobId) => {
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+        currentJobId = jobId;
+        const token = getAuthToken();
+        const updateOnce = async () => {
+          try {
+            const res = await fetch(`/jobs/${encodeURIComponent(jobId)}/status`, {
+              headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+            });
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+              const msg = (data && (data.detail || data.message)) || `Failed to poll status (${res.status})`;
+              if (statusEl) statusEl.textContent = msg;
+              return;
+            }
+            if (statusEl) {
+              statusEl.textContent = `Job ${data.id} · ${data.status}`;
+            }
+            if (progressBar && typeof data.progress === "number") {
+              progressBar.style.width = `${Math.max(0, Math.min(100, data.progress))}%`;
+            }
+            if (data.status === "completed" || data.status === "failed" || data.status === "canceled") {
+              clearInterval(pollTimer);
+              pollTimer = null;
+            }
+          } catch (err) {
+            if (statusEl) statusEl.textContent = "Network or server error when polling status";
+          }
+        };
+        // immediate and interval
+        updateOnce();
+        pollTimer = setInterval(updateOnce, 800);
+      };
+
+      const submitJob = async () => {
+        const mode = modeSelect.value;
+        const kind = mapModeToKind(mode);
+        const prompt = (promptInput.value || "").trim();
+        const model =
+          modelSelect.value ||
+          (mode === "image" ? "qwen-image" : mode === "image-video" || mode === "text-video" ? "sora2-video" : "");
+
+        if (!prompt) {
+          alert("Prompt cannot be empty");
+          return;
+        }
+
+        if (!model) {
+          alert("Please select a model");
+          return;
+        }
+
+        const orientation = kind === "text_to_image" ? null : getSelectedOrientation();
+        if (kind !== "text_to_image" && !orientation) {
+          alert("Orientation is required for video mode");
+          return;
+        }
+
+        const file = imageUploadInput.files && imageUploadInput.files[0];
+        if (kind === "image_to_video" && !file) {
+          alert("Source image is required for image to video mode");
+          return;
+        }
+
+        const fd = new FormData();
+        fd.append("prompt", prompt);
+        fd.append("kind", kind);
+        fd.append("model", model);
+        fd.append("is_public", "true");
+
+        if (orientation) {
+          fd.append("orientation", orientation);
+        }
+
+        if (imageSizeSelect) {
+          const size = imageSizeSelect.value;
+          if (size) fd.append("size", size);
+        }
+
+        if (stylePresetSelect) {
+          const style = stylePresetSelect.value;
+          if (style) fd.append("style", style);
+        }
+
+        if (guidanceSelect) {
+          const guidanceRaw = guidanceSelect.value;
+          if (guidanceRaw) fd.append("guidance", guidanceRaw);
+        }
+
+        if (file && kind === "image_to_video") {
+          fd.append("source_image", file);
+        }
+
+        const token = getAuthToken();
+
+        submitButton.disabled = true;
+        submitButton.textContent = "Submitting...";
+        if (statusEl) {
+          statusEl.textContent = "Submitting job...";
+        }
+
+        try {
+          const res = await fetch("/jobs", {
+            method: "POST",
+            body: fd,
+            headers: token
+              ? {
+                  Authorization: `Bearer ${token}`,
+                }
+              : undefined,
+          });
+
+          const data = await res.json().catch(() => null);
+
+          if (!res.ok) {
+            const message =
+              (data && (data.detail || data.message)) ||
+              `Failed to submit job (status ${res.status})`;
+            if (statusEl) {
+              statusEl.textContent = message;
+            } else {
+              alert(message);
+            }
+            return;
+          }
+
+          if (statusEl) {
+            statusEl.textContent = `Job ${data.id} · ${data.status}`;
+          }
+          if (progressBar && typeof data.progress === "number") {
+            progressBar.style.width = `${Math.max(0, Math.min(100, data.progress))}%`;
+          }
+          currentJobId = data.id;
+          if (cancelButton) {
+            cancelButton.disabled = false;
+          }
+          pollStatus(data.id);
+        } catch (err) {
+          if (statusEl) {
+            statusEl.textContent = "Network or server error when submitting job";
+          } else {
+            alert("Network or server error when submitting job");
+          }
+        } finally {
+          submitButton.disabled = false;
+          submitButton.textContent = "Submit job";
+        }
+      };
+
+      const cancelJob = async () => {
+        if (!currentJobId) {
+          return;
+        }
+        const token = getAuthToken();
+        cancelButton.disabled = true;
+        if (statusEl) {
+          statusEl.textContent = `Canceling job ${currentJobId}...`;
+        }
+        try {
+          const res = await fetch(`/jobs/${encodeURIComponent(currentJobId)}/cancel`, {
+            method: "POST",
+            headers: token
+              ? {
+                  Authorization: `Bearer ${token}`,
+                }
+              : undefined,
+          });
+          const data = await res.json().catch(() => null);
+          if (!res.ok) {
+            const message =
+              (data && (data.detail || data.message)) ||
+              `Failed to cancel job (status ${res.status})`;
+            if (statusEl) {
+              statusEl.textContent = message;
+            } else {
+              alert(message);
+            }
+            return;
+          }
+          if (statusEl) {
+            statusEl.textContent = `Job ${data.id} · ${data.status}`;
+          }
+          if (progressBar && typeof data.progress === "number") {
+            progressBar.style.width = `${Math.max(0, Math.min(100, data.progress))}%`;
+          }
+        } catch (err) {
+          if (statusEl) {
+            statusEl.textContent = "Network or server error when canceling job";
+          } else {
+            alert("Network or server error when canceling job");
+          }
+        } finally {
+          cancelButton.disabled = false;
+        }
+      };
+
+      modeSelect.addEventListener("change", syncView);
+      submitButton.addEventListener("click", submitJob);
+      if (cancelButton) {
+        cancelButton.addEventListener("click", cancelJob);
+      }
+
+      syncView();
+    })();
+  </script>
+  <script>
+    (() => {
+      const logoutBtn = document.getElementById('logout-btn');
+      const registerLink = document.querySelector('.ghost[href="auth-demo.html"]');
+      const loginLink = document.querySelector('.pill.accent[href="auth-demo.html"]');
+      
+      const handleLogout = () => {
+        localStorage.removeItem('lightsource_access_token');
+        localStorage.removeItem('access_token');
+        window.location.href = 'auth-demo.html';
+      };
+      
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+      }
+      
+      // Check if user is logged in
+      const token = localStorage.getItem('lightsource_access_token') || localStorage.getItem('access_token');
+      if (!token) {
+        window.location.href = 'auth-demo.html';
+      } else {
+        // Show logout button and hide login/register links when logged in
+        if (logoutBtn) logoutBtn.style.display = 'block';
+        if (registerLink) registerLink.style.display = 'none';
+        if (loginLink) loginLink.style.display = 'none';
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LightSource - Login & Register</title>
+  <style>
+    :root {
+      --bg: #0c0c0f;
+      --panel: #161618;
+      --panel-soft: #1d1d20;
+      --border: #242428;
+      --text: #f5f5f5;
+      --muted: #a7a8ad;
+      --accent: #f3d9a4;
+      --pill: #1f1f23;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+    * { box-sizing: border-box; }
+    a { color: inherit; text-decoration: none; }
+    body { 
+      margin: 0; 
+      min-height: 100vh; 
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif; 
+      background: var(--bg); 
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .auth-container {
+      width: 100%;
+      max-width: 420px;
+      padding: 20px;
+    }
+    .auth-panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: var(--shadow);
+    }
+    .auth-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .auth-header h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .auth-header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .brand {
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: 0.4px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+    }
+    input {
+      width: 100%;
+      background: #111116;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 14px;
+      transition: border-color 0.2s ease;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    input::placeholder {
+      color: var(--muted);
+      opacity: 0.6;
+    }
+    .password-strength {
+      margin-top: 6px;
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .password-strength-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      transition: width 0.3s ease, background-color 0.3s ease;
+    }
+    .password-strength-text {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+    .btn {
+      flex: 1;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--pill);
+      color: var(--text);
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+    .btn:hover {
+      border-color: #2f2f33;
+      background: #25252a;
+    }
+    .btn-accent {
+      background: var(--accent);
+      color: #1a1a1a;
+      border: none;
+      font-weight: 600;
+    }
+    .btn-accent:hover {
+      background: #e5c985;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .auth-switch {
+      text-align: center;
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .auth-switch a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .auth-switch a:hover {
+      text-decoration: underline;
+    }
+    .error-message {
+      background: rgba(244, 67, 54, 0.1);
+      border: 1px solid rgba(244, 67, 54, 0.3);
+      color: #f44336;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .success-message {
+      background: rgba(76, 175, 80, 0.1);
+      border: 1px solid rgba(76, 175, 80, 0.3);
+      color: #4caf50;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .form-group.hidden {
+      display: none;
+    }
+    .remember-forgot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      font-size: 13px;
+    }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .checkbox-group input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+    }
+    .forgot-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 13px;
+    }
+    .forgot-link:hover {
+      text-decoration: underline;
+    }
+    @media (max-width: 480px) {
+      .auth-panel {
+        padding: 24px;
+      }
+      .form-actions {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-panel">
+      <div class="auth-header">
+        <h1><span class="brand">LightSource</span></h1>
+        <p id="auth-subtitle">Sign in to your account</p>
+      </div>
+
+      <div id="error-message" class="error-message"></div>
+      <div id="success-message" class="success-message"></div>
+
+      <form id="auth-form">
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email" placeholder="user@example.com" required />
+        </div>
+
+        <div class="form-group" id="username-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" placeholder="johndoe" />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="••••••••" required />
+          <div class="password-strength" id="password-strength">
+            <div class="password-strength-bar" id="password-strength-bar"></div>
+          </div>
+          <div class="password-strength-text" id="password-strength-text"></div>
+        </div>
+
+        <div class="form-group" id="confirm-password-group">
+          <label for="confirm-password">Confirm Password</label>
+          <input type="password" id="confirm-password" name="confirm-password" placeholder="••••••••" />
+        </div>
+
+        <div class="remember-forgot" id="remember-forgot">
+          <div class="checkbox-group">
+            <input type="checkbox" id="remember" name="remember" />
+            <label for="remember">Remember me</label>
+          </div>
+          <a href="#" class="forgot-link" id="forgot-link">Forgot password?</a>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-accent" id="submit-btn">
+            <span id="submit-text">Sign In</span>
+          </button>
+          <button type="button" class="btn" id="demo-btn">Demo Access</button>
+        </div>
+      </form>
+
+      <div class="auth-switch" id="auth-switch">
+        <span id="switch-text">Don't have an account?</span>
+        <a href="#" id="switch-link">Sign up</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const form = document.getElementById('auth-form');
+      const emailInput = document.getElementById('email');
+      const usernameInput = document.getElementById('username');
+      const passwordInput = document.getElementById('password');
+      const confirmPasswordInput = document.getElementById('confirm-password');
+      const submitBtn = document.getElementById('submit-btn');
+      const submitText = document.getElementById('submit-text');
+      const switchLink = document.getElementById('switch-link');
+      const switchText = document.getElementById('switch-text');
+      const authSubtitle = document.getElementById('auth-subtitle');
+      const errorMessage = document.getElementById('error-message');
+      const successMessage = document.getElementById('success-message');
+      const demoBtn = document.getElementById('demo-btn');
+      const forgotLink = document.getElementById('forgot-link');
+      const rememberForgot = document.getElementById('remember-forgot');
+      const usernameGroup = document.getElementById('username-group');
+      const confirmPasswordGroup = document.getElementById('confirm-password-group');
+      const passwordStrength = document.getElementById('password-strength');
+      const passwordStrengthBar = document.getElementById('password-strength-bar');
+      const passwordStrengthText = document.getElementById('password-strength-text');
+
+      let isLoginMode = true;
+
+      const showMessage = (message, type = 'error') => {
+        const messageEl = type === 'error' ? errorMessage : successMessage;
+        const otherEl = type === 'error' ? successMessage : errorMessage;
+        
+        otherEl.style.display = 'none';
+        messageEl.textContent = message;
+        messageEl.style.display = 'block';
+        
+        setTimeout(() => {
+          messageEl.style.display = 'none';
+        }, 5000);
+      };
+
+      const toggleMode = () => {
+        isLoginMode = !isLoginMode;
+        
+        if (isLoginMode) {
+          authSubtitle.textContent = 'Sign in to your account';
+          submitText.textContent = 'Sign In';
+          switchText.textContent = "Don't have an account?";
+          switchLink.textContent = 'Sign up';
+          
+          usernameGroup.classList.add('hidden');
+          confirmPasswordGroup.classList.add('hidden');
+          passwordStrength.classList.add('hidden');
+          rememberForgot.style.display = 'flex';
+        } else {
+          authSubtitle.textContent = 'Create your account';
+          submitText.textContent = 'Sign Up';
+          switchText.textContent = 'Already have an account?';
+          switchLink.textContent = 'Sign in';
+          
+          usernameGroup.classList.remove('hidden');
+          confirmPasswordGroup.classList.remove('hidden');
+          passwordStrength.classList.remove('hidden');
+          rememberForgot.style.display = 'none';
+        }
+        
+        // Clear messages when switching modes
+        errorMessage.style.display = 'none';
+        successMessage.style.display = 'none';
+      };
+
+      const checkPasswordStrength = (password) => {
+        let strength = 0;
+        let feedback = [];
+        
+        if (password.length >= 8) strength += 25;
+        else feedback.push('At least 8 characters');
+        
+        if (/[a-z]/.test(password)) strength += 25;
+        else feedback.push('Include lowercase letters');
+        
+        if (/[A-Z]/.test(password)) strength += 25;
+        else feedback.push('Include uppercase letters');
+        
+        if (/\d/.test(password)) strength += 12.5;
+        else feedback.push('Include numbers');
+        
+        if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength += 12.5;
+        else feedback.push('Include special characters');
+        
+        return { strength, feedback };
+      };
+
+      const updatePasswordStrength = () => {
+        const password = passwordInput.value;
+        if (!password || isLoginMode) {
+          passwordStrengthBar.style.width = '0%';
+          passwordStrengthText.textContent = '';
+          return;
+        }
+        
+        const { strength, feedback } = checkPasswordStrength(password);
+        passwordStrengthBar.style.width = `${strength}%`;
+        
+        if (strength <= 25) {
+          passwordStrengthBar.style.backgroundColor = '#f44336';
+          passwordStrengthText.textContent = feedback[0] || 'Weak password';
+        } else if (strength <= 50) {
+          passwordStrengthBar.style.backgroundColor = '#ff9800';
+          passwordStrengthText.textContent = 'Fair password';
+        } else if (strength <= 75) {
+          passwordStrengthBar.style.backgroundColor = '#ffc107';
+          passwordStrengthText.textContent = 'Good password';
+        } else {
+          passwordStrengthBar.style.backgroundColor = '#4caf50';
+          passwordStrengthText.textContent = 'Strong password';
+        }
+      };
+
+      const validateForm = () => {
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+        const username = usernameInput.value.trim();
+        const confirmPassword = confirmPasswordInput.value;
+        
+        if (!email || !password) {
+          showMessage('Please fill in all required fields');
+          return false;
+        }
+        
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          showMessage('Please enter a valid email address');
+          return false;
+        }
+        
+        if (!isLoginMode) {
+          if (!username) {
+            showMessage('Please enter a username');
+            return false;
+          }
+          
+          if (password.length < 8) {
+            showMessage('Password must be at least 8 characters long');
+            return false;
+          }
+          
+          if (password !== confirmPassword) {
+            showMessage('Passwords do not match');
+            return false;
+          }
+        }
+        
+        return true;
+      };
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (!validateForm()) return;
+        
+        const formData = new FormData(form);
+        const data = {
+          email: formData.get('email'),
+          password: formData.get('password')
+        };
+        
+        if (!isLoginMode) {
+          data.username = formData.get('username');
+        }
+        
+        submitBtn.disabled = true;
+        submitText.textContent = isLoginMode ? 'Signing in...' : 'Creating account...';
+        
+        try {
+          // Simulate API call
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          // Store auth token (simulated)
+          const token = 'demo_token_' + Date.now();
+          localStorage.setItem('lightsource_access_token', token);
+          
+          if (isLoginMode) {
+            showMessage('Successfully signed in! Redirecting...', 'success');
+            setTimeout(() => {
+              window.location.href = 'dashboard-demo.html';
+            }, 1500);
+          } else {
+            showMessage('Account created successfully! Redirecting...', 'success');
+            setTimeout(() => {
+              window.location.href = 'dashboard-demo.html';
+            }, 1500);
+          }
+        } catch (error) {
+          showMessage(isLoginMode ? 'Failed to sign in. Please try again.' : 'Failed to create account. Please try again.');
+        } finally {
+          submitBtn.disabled = false;
+          submitText.textContent = isLoginMode ? 'Sign In' : 'Sign Up';
+        }
+      };
+
+      const handleDemoAccess = () => {
+        const demoToken = 'demo_access_token_' + Date.now();
+        localStorage.setItem('lightsource_access_token', demoToken);
+        showMessage('Demo access granted! Redirecting...', 'success');
+        setTimeout(() => {
+          window.location.href = 'dashboard-demo.html';
+        }, 1500);
+      };
+
+      const handleForgotPassword = (e) => {
+        e.preventDefault();
+        showMessage('Password reset instructions have been sent to your email.', 'success');
+      };
+
+      // Event listeners
+      form.addEventListener('submit', handleSubmit);
+      switchLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleMode();
+      });
+      demoBtn.addEventListener('click', handleDemoAccess);
+      forgotLink.addEventListener('click', handleForgotPassword);
+      passwordInput.addEventListener('input', updatePasswordStrength);
+      
+      // Initialize
+      passwordStrength.classList.add('hidden');
+      
+      // Check if user is already logged in
+      const existingToken = localStorage.getItem('lightsource_access_token');
+      if (existingToken) {
+        showMessage('You are already signed in. Redirecting...', 'success');
+        setTimeout(() => {
+          window.location.href = 'dashboard-demo.html';
+        }, 1500);
+      }
+    })();
+  </script>
+</body>
+</html>

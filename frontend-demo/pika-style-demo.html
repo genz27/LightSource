@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LightSource Frontend Demo</title>
+  <style>
+    :root {
+      --bg: #0c0c0f;
+      --panel: #161618;
+      --panel-soft: #1d1d20;
+      --border: #242428;
+      --text: #f5f5f5;
+      --muted: #a7a8ad;
+      --accent: #f3d9a4;
+      --pill: #1f1f23;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+    * { box-sizing: border-box; }
+    a { color: inherit; text-decoration: none; }
+    body { margin: 0; min-height: 100vh; font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+    .app { max-width: 1200px; margin: 0 auto; padding: 16px 18px 28px; }
+    header.top-bar { display: flex; justify-content: space-between; align-items: center; background: #0b0b0d; border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow); }
+    .brand { font-weight: 700; letter-spacing: 0.4px; }
+    .main-nav, .actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .pill { border-radius: 999px; border: 1px solid var(--border); background: var(--pill); color: var(--text); padding: 8px 14px; font-size: 13px; cursor: pointer; }
+    .pill:hover { border-color: #2f2f33; background: #25252a; }
+    .pill.active { border-color: var(--accent); background: var(--accent); color: #1a1a1a; font-weight: 700; }
+    .pill.accent { background: var(--accent); color: #1a1a1a; border: none; font-weight: 700; }
+    .ghost { color: var(--muted); font-size: 13px; padding: 6px 10px; border-radius: 10px; background: transparent; border: 1px solid transparent; }
+    .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--panel-soft); border: 1px solid var(--border); display: grid; place-items: center; font-size: 12px; color: var(--muted); font-weight: 700; }
+    .hero-intro { background: linear-gradient(135deg, #222229, #141419); border: 1px solid var(--border); border-radius: 16px; padding: 22px; box-shadow: var(--shadow); display: grid; gap: 14px; margin-top: 16px; }
+    .hero-intro h1 { margin: 0; font-size: 26px; letter-spacing: 0.3px; text-transform: uppercase; }
+    .hero-intro p { margin: 0; color: var(--muted); line-height: 1.6; }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 8px; color: var(--muted); font-size: 12px; }
+    .chip { padding: 6px 10px; border-radius: 10px; background: var(--pill); border: 1px solid var(--border); letter-spacing: 0.2px; }
+    .band { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); display: grid; gap: 10px; margin-top: 14px; }
+    /* Media masonry */
+    .media-grid { column-count: 3; column-gap: 18px; }
+    .media-card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); display: grid; gap: 10px; min-height: 170px; margin-bottom: 18px; break-inside: avoid; }
+    .media-card.image { background: linear-gradient(145deg, #24242b, #19191f); }
+    .media-card.video { background: linear-gradient(145deg, #1b2530, #10161e); }
+    .media-thumb { position: relative; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02); }
+    .media-thumb img, .media-thumb video { display: block; width: 100%; height: auto; }
+    .media-label { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; background: rgba(0,0,0,0.35); border: 1px solid var(--border); color: var(--text); font-size: 12px; letter-spacing: 0.3px; width: fit-content; }
+    .media-title { margin: 0; font-size: 16px; letter-spacing: 0.25px; color: var(--text); }
+    .media-desc { margin: 0; color: var(--muted); line-height: 1.5; font-size: 14px; }
+    footer.site-footer { margin-top: 24px; padding: 18px 0 8px; border-top: 1px solid var(--border); color: var(--muted); display: grid; gap: 8px; font-size: 13px; }
+    .footer-links { display: flex; gap: 12px; flex-wrap: wrap; }
+    @media (max-width: 1024px) { .media-grid { column-count: 2; } }
+    @media (max-width: 720px) { .media-grid { column-count: 1; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="top-bar">
+      <div class="brand">LightSource</div>
+      <nav class="main-nav">
+        <a class="pill active" href="pika-style-demo.html">Index</a>
+        <a class="pill" href="generator-demo.html">Generators</a>
+        <a class="pill" href="assets-demo.html">Library</a>
+        <a class="pill" href="dashboard-demo.html">Dashboard</a>
+      </nav>
+      <div class="actions">
+        <a class="ghost" href="auth-demo.html" aria-label="Register account">Register</a>
+        <a class="pill accent" href="auth-demo.html">Login</a>
+        <a class="avatar" href="settings-demo.html" aria-label="User settings">LS</a>
+        <button class="pill" id="logout-btn" style="display:none;">Logout</button>
+      </div>
+    </header>
+
+    <section class="hero-intro">
+      <h1>LightSource - AI image and video generation workspace</h1>
+      <p>Curate your best AI visuals in a calm, dark layout. Bring in finished renders, keep them organized, and spotlight the pieces you want to share.</p>
+      <div class="chip-row">
+        <span class="chip">Image generation</span>
+        <span class="chip">Video generation</span>
+        <span class="chip">Live progress ready</span>
+        <span class="chip">Public sharing</span>
+      </div>
+    </section>
+
+    <section class="band">
+      <h3 style="margin:0;font-size:18px;letter-spacing:0.25px;">Media board</h3>
+      <p style="margin:0;color:var(--muted);line-height:1.6;">Drop your generated images and videos here after each job completes.</p>
+      <div class="media-grid">
+        <div class="media-card image">
+          <div class="media-thumb"><img src="https://images.unsplash.com/photo-1505761671935-60b3a7427bad?auto=format&fit=crop&w=1200&q=80" alt="Cyberpunk skyline at dusk"></div>
+          <span class="media-label">Image</span>
+          <h4 class="media-title">Cyberpunk skyline at dusk</h4>
+          <p class="media-desc">High neon density, foggy midground, reflective streets??ready for hero thumbnails.</p>
+        </div>
+        <div class="media-card image">
+          <div class="media-thumb"><img src="https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d?auto=format&fit=crop&w=1200&q=80" alt="Portrait with neon rim light"></div>
+          <span class="media-label">Image</span>
+          <h4 class="media-title">Portrait with neon rim light</h4>
+          <p class="media-desc">Sharp edge glow, shallow depth of field, cinematic grading for character showcases.</p>
+        </div>
+        <div class="media-card video">
+          <div class="media-thumb"><video src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4" controls playsinline muted></video></div>
+          <span class="media-label">Video</span>
+          <h4 class="media-title">Night city hyperlapse</h4>
+          <p class="media-desc">Fast skyline push with bokeh trails; drop in your rendered MP4 once complete.</p>
+        </div>
+        <div class="media-card image">
+          <div class="media-thumb"><img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=80" alt="Product hero on matte backdrop"></div>
+          <span class="media-label">Image</span>
+          <h4 class="media-title">Product hero on matte backdrop</h4>
+          <p class="media-desc">Studio-lit packshot, soft shadows, and clean negative space for callouts.</p>
+        </div>
+        <div class="media-card image">
+          <div class="media-thumb"><img src="https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=1200&q=80" alt="Macro material study"></div>
+          <span class="media-label">Image</span>
+          <h4 class="media-title">Macro material study</h4>
+          <p class="media-desc">Close-up texture with specular highlights??swap in your favorite material test.</p>
+        </div>
+        <div class="media-card video">
+          <div class="media-thumb"><video src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4" controls playsinline muted></video></div>
+          <span class="media-label">Video</span>
+          <h4 class="media-title">Forest slow pan</h4>
+          <p class="media-desc">Volumetric light through trees; perfect for atmospheric reels.</p>
+        </div>
+        <div class="media-card image">
+          <div class="media-thumb"><img src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80" alt="Concept art frame"></div>
+          <span class="media-label">Image</span>
+          <h4 class="media-title">Concept art frame</h4>
+          <p class="media-desc">Story beat illustration with bold shapes and clear lighting direction.</p>
+        </div>
+        <div class="media-card video">
+          <div class="media-thumb"><video src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4" controls playsinline muted></video></div>
+          <span class="media-label">Video</span>
+          <h4 class="media-title">Cinematic slow reveal</h4>
+          <p class="media-desc">Steady dolly with soft focus pull; replace with your reveal shot.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <div class="footer-links">
+        <span>Docs</span><span>Status</span><span>Security</span><span>Contact</span>
+      </div>
+      <div class="footer-links">
+        <span>(c) 2025 LightSource</span>
+      </div>
+    </footer>
+  </div>
+  <script>
+    (() => {
+      const logoutBtn = document.getElementById('logout-btn');
+      const registerLink = document.querySelector('.ghost[href="auth-demo.html"]');
+      const loginLink = document.querySelector('.pill.accent[href="auth-demo.html"]');
+      
+      const handleLogout = () => {
+        localStorage.removeItem('lightsource_access_token');
+        localStorage.removeItem('access_token');
+        window.location.href = 'auth-demo.html';
+      };
+      
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+      }
+      
+      // Check if user is logged in
+      const token = localStorage.getItem('lightsource_access_token') || localStorage.getItem('access_token');
+      if (token) {
+        // Show logout button and hide login/register links when logged in
+        if (logoutBtn) logoutBtn.style.display = 'block';
+        if (registerLink) registerLink.style.display = 'none';
+        if (loginLink) loginLink.style.display = 'none';
+      }
+    })();
+  </script>
+</body>
+</html>
+
+

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LightSource Settings Demo</title>
+  <style>
+    :root { --bg:#0c0c0f; --panel:#161618; --panel-soft:#1d1d20; --border:#242428; --text:#f5f5f5; --muted:#a7a8ad; --accent:#f3d9a4; --pill:#1f1f23; --shadow:0 10px 30px rgba(0,0,0,0.35); }
+    *{box-sizing:border-box;} a{color:inherit;text-decoration:none;} body{margin:0;min-height:100vh;font-family:"Inter","Segoe UI",sans-serif;background:var(--bg);color:var(--text);} .app{max-width:1200px;margin:0 auto;padding:16px 18px 28px;}
+    header.top-bar{display:flex;justify-content:space-between;align-items:center;background:#0b0b0d;border:1px solid var(--border);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);} .brand{font-weight:700;letter-spacing:0.3px;}
+    .main-nav,.actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;} .ghost{color:var(--muted);font-size:13px;padding:6px 10px;border-radius:10px;background:transparent;border:1px solid transparent;} .avatar{width:30px;height:30px;border-radius:50%;background:var(--panel-soft);border:1px solid var(--border);display:grid;place-items:center;font-size:12px;color:var(--muted);font-weight:700;}
+    .pill{border-radius:999px;border:1px solid var(--border);background:var(--pill);color:var(--text);padding:8px 14px;font-size:13px;cursor:pointer;} .pill:hover{border-color:#2f2f33;background:#25252a;} .pill.active{border-color:var(--accent);background:var(--accent);color:#1a1a1a;font-weight:700;} .pill.accent{background:var(--accent);color:#1a1a1a;border:none;font-weight:700;}
+    main{display:grid;gap:16px;margin-top:16px;} .panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:var(--shadow);} h2{margin:0 0 6px;font-size:18px;letter-spacing:0.2px;} p{margin:0 0 10px;color:var(--muted);line-height:1.6;}
+    .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;} .field{display:grid;gap:6px;} .value{background:#111116;border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);} .actions-row{display:flex;gap:8px;flex-wrap:wrap;}
+    footer.site-footer{margin-top:24px;padding:18px 0 8px;border-top:1px solid var(--border);color:var(--muted);display:grid;gap:8px;font-size:13px;} .footer-links{display:flex;gap:12px;flex-wrap:wrap;}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="top-bar">
+      <div class="brand">LightSource</div>
+      <nav class="main-nav">
+        <a class="pill" href="pika-style-demo.html">Index</a>
+        <a class="pill" href="generator-demo.html">Generators</a>
+        <a class="pill" href="assets-demo.html">Library</a>
+        <a class="pill" href="dashboard-demo.html">Dashboard</a>
+        <a class="pill active" href="settings-demo.html">Settings</a>
+      </nav>
+      <div class="actions">
+        <a class="ghost" href="auth-demo.html" aria-label="Register account">Register</a>
+        <a class="pill accent" href="auth-demo.html">Login</a>
+        <a class="avatar" href="settings-demo.html" aria-label="User settings">LS</a>
+        <button class="pill" id="logout-btn" style="display:none;">Logout</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel">
+        <h2>Profile</h2>
+        <div class="row">
+          <div class="field">
+            <label>Email</label>
+            <div class="value">user@example.com</div>
+          </div>
+          <div class="field">
+            <label>Role</label>
+            <div class="value">User</div>
+          </div>
+          <div class="field">
+            <label>Last login</label>
+            <div class="value">2025-11-16 12:34 UTC</div>
+          </div>
+        </div>
+        <div class="actions-row" style="margin-top:10px;">
+          <button class="pill accent">Update profile</button>
+          <button class="pill">Change password</button>
+          <button class="pill" id="logout-btn">Logout</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Tokens</h2>
+        <div class="row">
+          <div class="field">
+            <label>Access token</label>
+            <div class="value">????????????????????</div>
+          </div>
+          <div class="field">
+            <label>Refresh token</label>
+            <div class="value">????????????????????</div>
+          </div>
+        </div>
+        <div class="actions-row" style="margin-top:10px;">
+          <button class="pill" id="rotate-tokens">Rotate tokens</button>
+          <button class="pill" id="copy-keys">Copy new keys</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Preferences</h2>
+        <div class="row">
+          <div class="field">
+            <label>Notifications</label>
+            <div class="value">Enabled</div>
+          </div>
+          <div class="field">
+            <label>Theme</label>
+            <div class="value">Dark</div>
+          </div>
+          <div class="field">
+            <label>Language</label>
+            <div class="value">English</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-links">
+        <span>Docs</span><span>Status</span><span>Security</span><span>Contact</span>
+      </div>
+      <div class="footer-links">
+        <span>(c) 2025 LightSource</span>
+      </div>
+    </footer>
+  </div>
+  <script>
+    (() => {
+      const logoutBtn = document.getElementById('logout-btn');
+      const rotateTokensBtn = document.getElementById('rotate-tokens');
+      const copyKeysBtn = document.getElementById('copy-keys');
+      const registerLink = document.querySelector('.ghost[href="auth-demo.html"]');
+      const loginLink = document.querySelector('.pill.accent[href="auth-demo.html"]');
+      
+      const handleLogout = () => {
+        localStorage.removeItem('lightsource_access_token');
+        localStorage.removeItem('access_token');
+        window.location.href = 'auth-demo.html';
+      };
+      
+      const handleRotateTokens = () => {
+        if (confirm('Are you sure you want to rotate your tokens? This will invalidate your current tokens.')) {
+          // Simulate token rotation
+          const newToken = 'new_demo_token_' + Date.now();
+          localStorage.setItem('lightsource_access_token', newToken);
+          alert('Tokens rotated successfully!');
+        }
+      };
+      
+      const handleCopyKeys = () => {
+        const accessToken = localStorage.getItem('lightsource_access_token') || 'demo_token_placeholder';
+        navigator.clipboard.writeText(accessToken).then(() => {
+          alert('Access token copied to clipboard!');
+        }).catch(() => {
+          alert('Failed to copy token. Please copy manually.');
+        });
+      };
+      
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+      }
+      
+      if (rotateTokensBtn) {
+        rotateTokensBtn.addEventListener('click', handleRotateTokens);
+      }
+      
+      if (copyKeysBtn) {
+        copyKeysBtn.addEventListener('click', handleCopyKeys);
+      }
+      
+      // Check if user is logged in
+      const token = localStorage.getItem('lightsource_access_token') || localStorage.getItem('access_token');
+      if (!token) {
+        window.location.href = 'auth-demo.html';
+      } else {
+        // Show logout button and hide login/register links when logged in
+        if (logoutBtn) logoutBtn.style.display = 'block';
+        if (registerLink) registerLink.style.display = 'none';
+        if (loginLink) loginLink.style.display = 'none';
+      }
+    })();
+  </script>
+</body>
+</html>

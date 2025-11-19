@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LightSource Assets Demo</title>
+  <style>
+    :root { --bg:#0c0c0f; --panel:#161618; --border:#242428; --text:#f5f5f5; --muted:#a7a8ad; --accent:#f3d9a4; --pill:#1f1f23; --shadow:0 10px 30px rgba(0,0,0,0.35); }
+    *{box-sizing:border-box;} a{color:inherit;text-decoration:none;} body{margin:0;min-height:100vh;font-family:"Inter","Segoe UI",sans-serif;background:var(--bg);color:var(--text);} .app{max-width:1200px;margin:0 auto;padding:16px 18px 28px;}
+    header.top-bar{display:flex;justify-content:space-between;align-items:center;background:#0b0b0d;border:1px solid var(--border);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);} .brand{font-weight:700;letter-spacing:0.3px;}
+    .main-nav,.actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;} .ghost{color:var(--muted);font-size:13px;padding:6px 10px;border-radius:10px;background:transparent;border:1px solid transparent;} .avatar{width:30px;height:30px;border-radius:50%;background:var(--panel);border:1px solid var(--border);display:grid;place-items:center;font-size:12px;color:var(--muted);font-weight:700;}
+    .pill{border-radius:999px;border:1px solid var(--border);background:var(--pill);color:var(--text);padding:8px 14px;font-size:13px;cursor:pointer;} .pill:hover{border-color:#2f2f33;background:#25252a;} .pill.active{border-color:var(--accent);background:var(--accent);color:#1a1a1a;font-weight:700;} .pill.accent{background:var(--accent);color:#1a1a1a;border:none;font-weight:700;}
+    main{display:grid;gap:16px;margin-top:16px;} .panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;box-shadow:var(--shadow);} h2{margin:0 0 6px;font-size:18px;letter-spacing:0.2px;} p{margin:0 0 10px;color:var(--muted);line-height:1.6;}
+    .filters{display:flex;gap:8px;flex-wrap:wrap;} .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;} .asset{border:1px solid var(--border);border-radius:12px;padding:12px;background:#121218;display:grid;gap:8px;}
+    .badge{padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:#1f2529;font-size:12px;width:fit-content;} .row{display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap;color:var(--muted);font-size:12px;}
+    footer.site-footer{margin-top:24px;padding:18px 0 8px;border-top:1px solid var(--border);color:var(--muted);display:grid;gap:8px;font-size:13px;} .footer-links{display:flex;gap:12px;flex-wrap:wrap;}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="top-bar">
+      <div class="brand">LightSource</div>
+      <nav class="main-nav">
+        <a class="pill" href="pika-style-demo.html">Index</a>
+        <a class="pill" href="generator-demo.html">Generators</a>
+        <a class="pill active" href="assets-demo.html">Library</a>
+        <a class="pill" href="dashboard-demo.html">Dashboard</a>
+      </nav>
+      <div class="actions">
+        <a class="ghost" href="auth-demo.html" aria-label="Register account">Register</a>
+        <a class="pill accent" href="auth-demo.html">Login</a>
+        <a class="avatar" href="settings-demo.html" aria-label="User settings">LS</a>
+        <button class="pill" id="logout-btn" style="display:none;">Logout</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel">
+        <h2>Filters</h2>
+        <div class="filters">
+          <button class="pill" data-filter-type="image">Images</button>
+          <button class="pill" data-filter-type="video">Videos</button>
+          <button class="pill" data-filter-provider="openai">Provider: OpenAI</button>
+          <button class="pill" data-filter-provider="qwen">Provider: Qwen</button>
+          <button class="pill" data-filter-public="true">Public only</button>
+          <button class="pill accent" data-filter-reset>Reset</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Library</h2>
+        <div id="assets-status" style="color:var(--muted);font-size:13px;margin-bottom:8px;">Loading assets...</div>
+        <div class="grid" id="assets-grid">
+          <!-- Filled dynamically from /assets -->
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-links">
+        <span>Docs</span><span>Status</span><span>Security</span><span>Contact</span>
+      </div>
+      <div class="footer-links">
+        <span>(c) 2025 LightSource</span>
+      </div>
+    </footer>
+  </div>
+  <script>
+    (() => {
+      const grid = document.getElementById("assets-grid");
+      const statusEl = document.getElementById("assets-status");
+      const filterButtons = document.querySelectorAll(".filters .pill");
+
+      const filters = {
+        type: null,
+        provider: null,
+        publicOnly: null,
+      };
+
+      const getAuthToken = () => {
+        return (
+          window.localStorage.getItem("lightsource_access_token") ||
+          window.localStorage.getItem("access_token") ||
+          ""
+        );
+      };
+
+      const buildQuery = () => {
+        const params = new URLSearchParams();
+        if (filters.type) {
+          params.set("type", filters.type);
+        }
+        if (filters.provider) {
+          params.set("provider", filters.provider);
+        }
+        if (filters.publicOnly !== null) {
+          params.set("public", String(filters.publicOnly));
+        }
+        const qs = params.toString();
+        return qs ? `?${qs}` : "";
+      };
+
+      const renderAssets = (items) => {
+        grid.innerHTML = "";
+        if (!items || !items.length) {
+          const empty = document.createElement("div");
+          empty.style.color = "var(--muted)";
+          empty.style.fontSize = "13px";
+          empty.textContent = "No assets match the current filters.";
+          grid.appendChild(empty);
+          return;
+        }
+
+        items.forEach((asset) => {
+          const card = document.createElement("div");
+          card.className = "asset";
+
+          const badge = document.createElement("div");
+          badge.className = "badge";
+          const typeLabel = asset.type === "image" ? "Image" : "Video";
+          const publicLabel = asset.is_public ? "Public" : "Private";
+          badge.textContent = `${typeLabel} · ${publicLabel}`;
+
+          const thumb = document.createElement("div");
+          thumb.style.height = "120px";
+          thumb.style.borderRadius = "10px";
+          thumb.style.border = "1px solid var(--border)";
+          thumb.style.background = "#0f0f12";
+          if (asset.preview_url || asset.url) {
+            thumb.style.backgroundImage = `url(${asset.preview_url || asset.url})`;
+            thumb.style.backgroundSize = "cover";
+            thumb.style.backgroundPosition = "center";
+          }
+
+          const row1 = document.createElement("div");
+          row1.className = "row";
+          const promptSpan = document.createElement("span");
+          const prompt = asset.meta && asset.meta.prompt;
+          promptSpan.textContent = prompt ? `Prompt: ${prompt}` : asset.id;
+          const providerSpan = document.createElement("span");
+          providerSpan.textContent = asset.provider || "Unknown";
+          row1.appendChild(promptSpan);
+          row1.appendChild(providerSpan);
+
+          const row2 = document.createElement("div");
+          row2.className = "row";
+          const left = document.createElement("span");
+          const right = document.createElement("span");
+
+          const downloadLink = document.createElement("a");
+          downloadLink.href = asset.url || asset.preview_url || "#";
+          downloadLink.target = "_blank";
+          downloadLink.rel = "noopener noreferrer";
+          downloadLink.textContent = "Download";
+
+          const deleteBtn = document.createElement("button");
+          deleteBtn.textContent = "Delete";
+          deleteBtn.className = "pill";
+          deleteBtn.style.padding = "4px 10px";
+          deleteBtn.style.fontSize = "11px";
+          deleteBtn.addEventListener("click", () => handleDelete(asset.id));
+
+          left.appendChild(downloadLink);
+          left.appendChild(document.createTextNode(" · "));
+          left.appendChild(deleteBtn);
+
+          const shareLink = document.createElement("button");
+          shareLink.className = "pill";
+          shareLink.style.padding = "4px 10px";
+          shareLink.style.fontSize = "11px";
+          shareLink.textContent = asset.is_public ? "Copy public link" : "Private";
+          shareLink.disabled = !asset.is_public;
+          shareLink.addEventListener("click", () => {
+            if (!asset.is_public) return;
+            const url = asset.url || asset.preview_url || "";
+            if (!url) return;
+            navigator.clipboard
+              .writeText(url)
+              .catch(() => {});
+          });
+
+          right.appendChild(shareLink);
+
+          row2.appendChild(left);
+          row2.appendChild(right);
+
+          card.appendChild(badge);
+          card.appendChild(thumb);
+          card.appendChild(row1);
+          card.appendChild(row2);
+          grid.appendChild(card);
+        });
+      };
+
+      const loadAssets = async () => {
+        const qs = buildQuery();
+        const token = getAuthToken();
+        statusEl.textContent = "Loading assets...";
+        try {
+          const res = await fetch(`/assets${qs}`, {
+            headers: token
+              ? {
+                  Authorization: `Bearer ${token}`,
+                }
+              : undefined,
+          });
+          const data = await res.json().catch(() => null);
+          if (!res.ok) {
+            const message =
+              (data && (data.detail || data.message)) ||
+              `Failed to load assets (status ${res.status})`;
+            statusEl.textContent = message;
+            return;
+          }
+          statusEl.textContent = `Loaded ${data.total} assets`;
+          renderAssets(data.items || []);
+        } catch (err) {
+          statusEl.textContent = "Network or server error when loading assets";
+        }
+      };
+
+      const handleDelete = async (id) => {
+        const token = getAuthToken();
+        if (!token) {
+          alert("Login required to delete assets");
+          return;
+        }
+        if (!window.confirm(`Delete asset ${id}?`)) {
+          return;
+        }
+        try {
+          const res = await fetch(`/assets/${encodeURIComponent(id)}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          if (!res.ok && res.status !== 204) {
+            const data = await res.json().catch(() => null);
+            const message =
+              (data && (data.detail || data.message)) ||
+              `Failed to delete asset (status ${res.status})`;
+            alert(message);
+            return;
+          }
+          await loadAssets();
+        } catch (err) {
+          alert("Network or server error when deleting asset");
+        }
+      };
+
+      filterButtons.forEach((btn) => {
+        if (btn.hasAttribute("data-filter-type")) {
+          btn.addEventListener("click", () => {
+            const value = btn.getAttribute("data-filter-type");
+            filters.type = value;
+            loadAssets();
+          });
+        } else if (btn.hasAttribute("data-filter-provider")) {
+          btn.addEventListener("click", () => {
+            const value = btn.getAttribute("data-filter-provider");
+            filters.provider = value;
+            loadAssets();
+          });
+        } else if (btn.hasAttribute("data-filter-public")) {
+          btn.addEventListener("click", () => {
+            filters.publicOnly = true;
+            loadAssets();
+          });
+        } else if (btn.hasAttribute("data-filter-reset")) {
+          btn.addEventListener("click", () => {
+            filters.type = null;
+            filters.provider = null;
+            filters.publicOnly = null;
+            loadAssets();
+          });
+        }
+      });
+
+      loadAssets();
+    })();
+  </script>
+  <script>
+    (() => {
+      const logoutBtn = document.getElementById('logout-btn');
+      const registerLink = document.querySelector('.ghost[href="auth-demo.html"]');
+      const loginLink = document.querySelector('.pill.accent[href="auth-demo.html"]');
+      
+      const handleLogout = () => {
+        localStorage.removeItem('lightsource_access_token');
+        localStorage.removeItem('access_token');
+        window.location.href = 'auth-demo.html';
+      };
+      
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+      }
+      
+      // Check if user is logged in
+      const token = localStorage.getItem('lightsource_access_token') || localStorage.getItem('access_token');
+      if (!token) {
+        window.location.href = 'auth-demo.html';
+      } else {
+        // Show logout button and hide login/register links when logged in
+        if (logoutBtn) logoutBtn.style.display = 'block';
+        if (registerLink) registerLink.style.display = 'none';
+        if (loginLink) loginLink.style.display = 'none';
+      }
+    })();
+  </script>
+</body>
+</html>
+
+

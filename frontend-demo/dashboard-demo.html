@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LightSource Dashboard Demo</title>
+  <style>
+    :root { --bg:#0c0c0f; --panel:#161618; --border:#242428; --text:#f5f5f5; --muted:#a7a8ad; --accent:#f3d9a4; --pill:#1f1f23; --shadow:0 10px 30px rgba(0,0,0,0.35); }
+    *{box-sizing:border-box;} a{color:inherit;text-decoration:none;} body{margin:0;min-height:100vh;font-family:"Inter","Segoe UI",sans-serif;background:var(--bg);color:var(--text);} .app{max-width:1200px;margin:0 auto;padding:16px 18px 28px;}
+    header.top-bar{display:flex;justify-content:space-between;align-items:center;background:#0b0b0d;border:1px solid var(--border);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);} .brand{font-weight:700;letter-spacing:0.3px;}
+    .main-nav,.actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;} .ghost{color:var(--muted);font-size:13px;padding:6px 10px;border-radius:10px;background:transparent;border:1px solid transparent;} .avatar{width:30px;height:30px;border-radius:50%;background:var(--panel);border:1px solid var(--border);display:grid;place-items:center;font-size:12px;color:var(--muted);font-weight:700;}
+    .pill{border-radius:999px;border:1px solid var(--border);background:var(--pill);color:var(--text);padding:8px 14px;font-size:13px;cursor:pointer;} .pill:hover{border-color:#2f2f33;background:#25252a;} .pill.active{border-color:var(--accent);background:var(--accent);color:#1a1a1a;font-weight:700;} .pill.accent{background:var(--accent);color:#1a1a1a;border:none;font-weight:700;}
+    main{display:grid;gap:16px;margin-top:16px;} .panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:var(--shadow);} h2{margin:0 0 6px;font-size:18px;letter-spacing:0.2px;} p{margin:0 0 10px;color:var(--muted);line-height:1.6;}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;} .stat{padding:12px;border-radius:12px;border:1px solid var(--border);background:#121218;} .jobs{display:grid;gap:10px;} .job{border:1px solid var(--border);border-radius:12px;padding:12px;background:#121218;display:grid;gap:6px;} .status{padding:4px 8px;border-radius:8px;font-size:12px;background:#1f2529;border:1px solid var(--border);width:fit-content;} .row{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:12px;}
+    footer.site-footer{margin-top:24px;padding:18px 0 8px;border-top:1px solid var(--border);color:var(--muted);display:grid;gap:8px;font-size:13px;} .footer-links{display:flex;gap:12px;flex-wrap:wrap;}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="top-bar">
+      <div class="brand">LightSource</div>
+      <nav class="main-nav">
+        <a class="pill" href="pika-style-demo.html">Index</a>
+        <a class="pill" href="generator-demo.html">Generators</a>
+        <a class="pill" href="assets-demo.html">Library</a>
+        <a class="pill active" href="dashboard-demo.html">Dashboard</a>
+      </nav>
+      <div class="actions">
+        <a class="ghost" href="auth-demo.html" aria-label="Register account">Register</a>
+        <a class="pill accent" href="auth-demo.html">Login</a>
+        <a class="avatar" href="settings-demo.html" aria-label="User settings">LS</a>
+        <button class="pill" id="logout-btn" style="display:none;">Logout</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel">
+        <h2>Overview</h2>
+        <div class="grid">
+          <div class="stat">
+            <strong>Active jobs</strong>
+            <p id="stat-active" style="margin:4px 0 0;">–</p>
+          </div>
+          <div class="stat">
+            <strong>Completed</strong>
+            <p id="stat-completed" style="margin:4px 0 0;">–</p>
+          </div>
+          <div class="stat">
+            <strong>Public</strong>
+            <p id="stat-public" style="margin:4px 0 0;">–</p>
+          </div>
+          <div class="stat">
+            <strong>Errors</strong>
+            <p id="stat-errors" style="margin:4px 0 0;">–</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Recent jobs</h2>
+        <div id="jobs-status" style="color:var(--muted);font-size:13px;margin-bottom:8px;">Loading jobs...</div>
+        <div class="jobs" id="jobs-list"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Quick actions</h2>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="pill" data-jobs-filter="running">Filter: running</button>
+          <button class="pill" data-jobs-filter="completed">Filter: completed</button>
+          <button class="pill" data-action="retry-last">Retry last</button>
+          <button class="pill" data-action="show-assets">Downloaded assets</button>
+          <button class="pill accent" data-action="create-job">Create new job</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-links">
+        <span>Docs</span><span>Status</span><span>Security</span><span>Contact</span>
+      </div>
+      <div class="footer-links">
+        <span>(c) 2025 LightSource</span>
+      </div>
+    </footer>
+  </div>
+  <script>
+    (() => {
+      const statActive = document.getElementById("stat-active");
+      const statCompleted = document.getElementById("stat-completed");
+      const statPublic = document.getElementById("stat-public");
+      const statErrors = document.getElementById("stat-errors");
+      const jobsStatus = document.getElementById("jobs-status");
+      const jobsList = document.getElementById("jobs-list");
+      const filterButtons = document.querySelectorAll("[data-jobs-filter]");
+
+      const getAuthToken = () => {
+        return (
+          window.localStorage.getItem("lightsource_access_token") ||
+          window.localStorage.getItem("access_token") ||
+          ""
+        );
+      };
+
+      let jobsData = [];
+      let assetsData = [];
+      let currentFilter = null;
+
+      const renderStats = () => {
+        const running = jobsData.filter((j) => j.status === "running").length;
+        const queued = jobsData.filter((j) => j.status === "queued").length;
+        const activeTotal = running + queued;
+        const completedJobs = jobsData.filter((j) => j.status === "completed").length;
+        const failedJobs = jobsData.filter((j) => j.status === "failed").length;
+
+        const publicAssets = assetsData.filter((a) => a.is_public).length;
+        const totalAssets = assetsData.length;
+
+        if (statActive) {
+          statActive.textContent =
+            activeTotal > 0
+              ? `${running} running · ${queued} queued`
+              : "No active jobs";
+        }
+        if (statCompleted) {
+          statCompleted.textContent =
+            totalAssets > 0 ? `${totalAssets} assets total` : "No assets yet";
+        }
+        if (statPublic) {
+          statPublic.textContent =
+            publicAssets > 0 ? `${publicAssets} public assets` : "No public assets";
+        }
+        if (statErrors) {
+          statErrors.textContent =
+            failedJobs > 0 ? `${failedJobs} failed jobs` : "No failures today";
+        }
+      };
+
+      const renderJobs = () => {
+        jobsList.innerHTML = "";
+        let items = jobsData.slice();
+        if (currentFilter) {
+          items = items.filter((j) => j.status === currentFilter);
+        }
+        if (!items.length) {
+          const empty = document.createElement("div");
+          empty.style.color = "var(--muted)";
+          empty.style.fontSize = "13px";
+          empty.textContent = "No jobs match the current filter.";
+          jobsList.appendChild(empty);
+          return;
+        }
+        items.slice(0, 5).forEach((job) => {
+          const card = document.createElement("div");
+          card.className = "job";
+
+          const row1 = document.createElement("div");
+          row1.className = "row";
+          const idSpan = document.createElement("span");
+          idSpan.textContent = job.id;
+          const statusSpan = document.createElement("span");
+          statusSpan.className = "status";
+          statusSpan.textContent = job.status;
+          row1.appendChild(idSpan);
+          row1.appendChild(statusSpan);
+
+          const row2 = document.createElement("div");
+          row2.className = "row";
+          const promptSpan = document.createElement("span");
+          promptSpan.textContent = `Prompt: ${job.prompt}`;
+          const providerSpan = document.createElement("span");
+          providerSpan.textContent = `Provider: ${job.provider || "Unknown"}`;
+          row2.appendChild(promptSpan);
+          row2.appendChild(providerSpan);
+
+          const row3 = document.createElement("div");
+          row3.className = "row";
+          const progressSpan = document.createElement("span");
+          progressSpan.textContent = `Progress: ${job.progress ?? 0}%`;
+          const publicSpan = document.createElement("span");
+          publicSpan.textContent = `Public: ${job.is_public ? "yes" : "no"}`;
+          row3.appendChild(progressSpan);
+          row3.appendChild(publicSpan);
+
+          card.appendChild(row1);
+          card.appendChild(row2);
+          card.appendChild(row3);
+          jobsList.appendChild(card);
+        });
+      };
+
+      const loadData = async () => {
+        const token = getAuthToken();
+        jobsStatus.textContent = "Loading jobs and assets...";
+        try {
+          const [jobsRes, assetsRes] = await Promise.all([
+            fetch("/jobs", {
+              headers: token
+                ? {
+                    Authorization: `Bearer ${token}`,
+                  }
+                : undefined,
+            }),
+            fetch("/assets", {
+              headers: token
+                ? {
+                    Authorization: `Bearer ${token}`,
+                  }
+                : undefined,
+            }),
+          ]);
+
+          const jobsJson = await jobsRes.json().catch(() => null);
+          const assetsJson = await assetsRes.json().catch(() => null);
+
+          if (!jobsRes.ok) {
+            const msg =
+              (jobsJson && (jobsJson.detail || jobsJson.message)) ||
+              `Failed to load jobs (status ${jobsRes.status})`;
+            jobsStatus.textContent = msg;
+            return;
+          }
+          if (!assetsRes.ok) {
+            const msg =
+              (assetsJson && (assetsJson.detail || assetsJson.message)) ||
+              `Failed to load assets (status ${assetsRes.status})`;
+            jobsStatus.textContent = msg;
+            return;
+          }
+
+          jobsData = (jobsJson && jobsJson.items) || [];
+          assetsData = (assetsJson && assetsJson.items) || [];
+
+          jobsStatus.textContent = `Loaded ${jobsData.length} jobs · ${assetsData.length} assets`;
+          renderStats();
+          renderJobs();
+        } catch (err) {
+          jobsStatus.textContent = "Network or server error when loading dashboard data";
+        }
+      };
+
+      const pollActive = () => {
+        const token = getAuthToken();
+        const tick = async () => {
+          try {
+            const res = await fetch(`/jobs/active?limit=20`, {
+              headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+            });
+            const data = await res.json().catch(() => null);
+            if (!res.ok) return;
+            const byId = new Map(jobsData.map((j) => [j.id, j]));
+            (data || []).forEach((s) => {
+              const j = byId.get(s.id);
+              if (j) {
+                j.status = s.status;
+                j.progress = s.progress;
+                j.updated_at = s.updated_at;
+              }
+            });
+            renderStats();
+            renderJobs();
+          } catch {}
+        };
+        tick();
+        setInterval(tick, 1000);
+      };
+
+      filterButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const value = btn.getAttribute("data-jobs-filter");
+          currentFilter = value;
+          renderJobs();
+        });
+      });
+
+      document.querySelectorAll("[data-action]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const action = btn.getAttribute("data-action");
+          if (action === "create-job") {
+            window.location.href = "generator-demo.html";
+          } else if (action === "show-assets") {
+            window.location.href = "assets-demo.html";
+          } else if (action === "retry-last") {
+            if (!jobsData.length) {
+              alert("No jobs to retry yet.");
+            } else {
+              const last = jobsData[0];
+              alert(`Retry logic is not implemented yet. Last job: ${last.id}`);
+            }
+          }
+        });
+      });
+
+      loadData().then(pollActive);
+    })();
+  </script>
+  <script>
+    (() => {
+      const logoutBtn = document.getElementById('logout-btn');
+      const registerLink = document.querySelector('.ghost[href="auth-demo.html"]');
+      const loginLink = document.querySelector('.pill.accent[href="auth-demo.html"]');
+      
+      const handleLogout = () => {
+        localStorage.removeItem('lightsource_access_token');
+        localStorage.removeItem('access_token');
+        window.location.href = 'auth-demo.html';
+      };
+      
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+      }
+      
+      // Check if user is logged in
+      const token = localStorage.getItem('lightsource_access_token') || localStorage.getItem('access_token');
+      if (!token) {
+        window.location.href = 'auth-demo.html';
+      } else {
+        // Show logout button and hide login/register links when logged in
+        if (logoutBtn) logoutBtn.style.display = 'block';
+        if (registerLink) registerLink.style.display = 'none';
+        if (loginLink) loginLink.style.display = 'none';
+      }
+    })();
+  </script>
+</body>
+</html>
+
+
