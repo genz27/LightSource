@@ -2,23 +2,6 @@
 
 简洁的 AI 媒资生成与管理示例：后端 FastAPI + SQLAlchemy，前端 Vue 3 + Pinia + Vite。涵盖登录、任务、资源、提供商、管理员、钱包与偏好设置，采用 HTTP 轮询与静态文件存储。
 
-```mermaid
-graph LR
-  U[User] --> F[Vue 3 + Pinia + Vite]
-  F --> A[FastAPI]
-  A --> Auth[Auth]
-  A --> Jobs[Jobs]
-  A --> Assets[Assets]
-  A --> Providers[Providers]
-  A --> Admin[Admin]
-  A --> Billing[Wallet]
-  A --> Prefs[Preferences]
-  A --> Metrics[Metrics]
-  A --> Media[Static Files]
-  A --> DB[PostgreSQL]
-  Media --> Storage[storage/media]
-```
-
 ## 特性
 - 后端 API：`/auth`、`/providers`、`/jobs`、`/assets`、`/v1/images`、`/v1/videos`、`/billing`、`/preferences`、`/admin`、`/metrics`、`/health`
 - 速率限制与跨域：中间件配置与 CORS 列表（参考 `app/main.py` 与 `app/config.py`）
