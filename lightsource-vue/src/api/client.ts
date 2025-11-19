@@ -6,9 +6,28 @@ function computeRoot(): string {
   if (envBase && envBase.trim()) return envBase.replace(/\/$/, '')
   return location.origin
 }
-const ROOT = computeRoot()
+let BASE: string | null = null
 const API_PREFIX = '/api'
-const apiUrl = (path: string) => `${ROOT}${API_PREFIX}${path}`
+async function resolveBase(): Promise<string> {
+  if (BASE) return BASE
+  const base = computeRoot()
+  try {
+    const r = await fetch(`${base}${API_PREFIX}/health`, { method: 'GET' })
+    if (r.ok || (r.status >= 400 && r.status < 500)) { BASE = base; return BASE }
+  } catch {}
+  try {
+    const u = new URL(base)
+    const f = `${u.protocol}//${u.hostname}:8000`
+    const r2 = await fetch(`${f}${API_PREFIX}/health`, { method: 'GET' })
+    if (r2.ok || (r2.status >= 400 && r2.status < 500)) { BASE = f; return BASE }
+  } catch {}
+  BASE = base
+  return BASE
+}
+async function apiUrl(path: string): Promise<string> {
+  const b = await resolveBase()
+  return `${b}${API_PREFIX}${path}`
+}
 
 async function request(path: string, init: RequestInit = {}) {
   const auth = useAuthStore()
@@ -22,7 +41,8 @@ async function request(path: string, init: RequestInit = {}) {
     if (auth.token) {
       headers['Authorization'] = `Bearer ${auth.token}`
     }
-    const resp = await fetch(apiUrl(path), { ...init, headers })
+    const url = await apiUrl(path)
+    const resp = await fetch(url, { ...init, headers })
     const text = await resp.text()
     const data = text ? JSON.parse(text) : null
     return { resp, data }
@@ -72,7 +92,8 @@ async function requestText(path: string, init: RequestInit = {}) {
       ...(init.headers as Record<string, string> || {}),
     }
     if (auth.token) headers['Authorization'] = `Bearer ${auth.token}`
-    const resp = await fetch(apiUrl(path), { ...init, headers })
+    const url = await apiUrl(path)
+    const resp = await fetch(url, { ...init, headers })
     const text = await resp.text()
     return { resp, text }
   }
