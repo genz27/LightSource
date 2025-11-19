@@ -169,16 +169,52 @@ async def get_job_status(
     provider_updated_at = None
     provider_error_message = None
     provider_detail: dict | None = None
+    def _norm_progress(val) -> int | None:
+        try:
+            if isinstance(val, (int, float)):
+                if 0 <= float(val) <= 1:
+                    return int(float(val) * 100)
+                return int(float(val))
+            if isinstance(val, str):
+                f = float(val)
+                if 0 <= f <= 1:
+                    return int(f * 100)
+                return int(f)
+        except Exception:
+            return None
+        return None
+
     if job.kind in {JobKind.TEXT_TO_VIDEO, JobKind.IMAGE_TO_VIDEO}:
         try:
             from app.services.persistence import get_provider_by_name
             p = await get_provider_by_name(session, job.provider) if job.provider else None
             if p and p.enabled and isinstance(vendor_video_id, str) and vendor_video_id:
                 from app.interface.sora2 import get_video
-                provider_detail = get_video(vendor_video_id, api_key=p.api_token, base_url=p.base_url, debug=bool(debug))
+                base_eff = p.base_url
+                try:
+                    b = str(base_eff or "").lower()
+                    if (not base_eff) or ("sora2.example" in b) or b.endswith(".example"):
+                        base_eff = None
+                except Exception:
+                    base_eff = None
+                provider_detail = get_video(vendor_video_id, api_key=p.api_token, base_url=base_eff, debug=bool(debug))
                 if isinstance(provider_detail, dict) and not provider_detail.get("error"):
-                    provider_status = provider_detail.get("status")
-                    provider_progress = provider_detail.get("progress")
+                    raw_status = provider_detail.get("status")
+                    # normalize common provider status names
+                    status_map = {
+                        "succeeded": "completed",
+                        "completed": "completed",
+                        "processing": "processing",
+                        "running": "processing",
+                        "queued": "queued",
+                        "pending": "queued",
+                        "failed": "failed",
+                        "error": "failed",
+                    }
+                    provider_status = status_map.get(str(raw_status).lower(), str(raw_status).lower() if isinstance(raw_status, str) else None)
+                    provider_progress = _norm_progress(provider_detail.get("progress"))
+                    if provider_status == "completed" and provider_progress is None:
+                        provider_progress = 100
                     provider_task_id = provider_detail.get("task_id")
                     provider_result_url = provider_detail.get("video_url") or provider_detail.get("result_url")
                     provider_model_name = provider_detail.get("model")
@@ -212,15 +248,22 @@ async def get_job_status(
                 store.update_job(job.id, status=JobStatus.COMPLETED, progress=100)
                 await update_job_fields(session, job.id, status=JobStatus.COMPLETED, progress=100)
             elif provider_status == "processing":
-                if isinstance(provider_progress, (int, float)):
-                    store.update_job(job.id, status=JobStatus.RUNNING, progress=int(provider_progress))
-                    await update_job_fields(session, job.id, status=JobStatus.RUNNING, progress=int(provider_progress))
+                pr = provider_progress if isinstance(provider_progress, (int, float)) else None
+                if pr is None:
+                    pr = runtime_job.progress if isinstance(runtime_job.progress, (int, float)) else None
+                if pr is None:
+                    pr = 1
+                store.update_job(job.id, status=JobStatus.RUNNING, progress=int(pr))
+                await update_job_fields(session, job.id, status=JobStatus.RUNNING, progress=int(pr))
             elif provider_status == "queued":
                 store.update_job(job.id, status=JobStatus.QUEUED)
                 await update_job_fields(session, job.id, status=JobStatus.QUEUED)
             elif provider_status == "failed":
                 store.update_job(job.id, status=JobStatus.FAILED)
                 await update_job_fields(session, job.id, status=JobStatus.FAILED)
+            elif provider_status == "succeeded":
+                store.update_job(job.id, status=JobStatus.COMPLETED, progress=100)
+                await update_job_fields(session, job.id, status=JobStatus.COMPLETED, progress=100)
         except Exception:
             pass
     fallback_progress = None
@@ -317,7 +360,7 @@ async def get_job_status(
             "video_id": vendor_video_id or job.id,
             "task_id": task_id,
             "status": status_ext,
-            "progress": float(provider_progress if isinstance(provider_progress, (int, float)) else runtime_job.progress),
+            "progress": float(provider_progress if isinstance(provider_progress, (int, float)) else (runtime_job.progress or fallback_progress or 0)),
             "model": model_name,
             "prompt": job.prompt,
             "image_provided": bool(extras.get("source_image_url")),
