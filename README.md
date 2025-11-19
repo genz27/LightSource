@@ -25,8 +25,8 @@ flowchart LR
 - 媒资静态服务：`/media` 映射到 `storage/media/`
 
 ## 截图
-![生成器界面](docs/screenshots/generator.png)
-![资源库界面](docs/screenshots/library.png)
+![生成器界面](/generator.png)
+![资源库界面](/library.png)
 
 ## 目录
 - `app/` 后端代码（FastAPI、SQLAlchemy、Pydantic）
