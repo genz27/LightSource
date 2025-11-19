@@ -45,7 +45,7 @@ def create_app() -> FastAPI:
     @app.middleware("http")
     async def rate_limit_middleware(request: Request, call_next):
         path = request.url.path
-        if not (path.startswith("/jobs") or path.startswith("/v1/images") or path.startswith("/v1/videos")):
+        if not (path.startswith("/api/jobs") or path.startswith("/api/v1/images") or path.startswith("/api/v1/videos")):
             return await call_next(request)
         now = asyncio.get_event_loop().time()
         key_parts = [request.client.host or "unknown"]

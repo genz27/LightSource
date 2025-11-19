@@ -4,6 +4,7 @@ import asyncio
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from starlette.responses import JSONResponse
 from app.api.utils import api_error
 
 from app.deps.auth import get_current_user_optional, get_current_user
@@ -304,7 +305,7 @@ async def get_job_status(
                 payload["provider_debug"] = provider_detail.get("debug")
             elif isinstance(raw, dict) and raw.get("debug"):
                 payload["provider_debug"] = raw.get("debug")
-        return payload
+        return JSONResponse(content=payload, headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
     else:
         payload = {
             "image_id": job.id,
@@ -319,7 +320,7 @@ async def get_job_status(
             "created_at": job.created_at.isoformat() + "Z",
             "updated_at": job.updated_at.isoformat() + "Z",
         }
-        return payload
+        return JSONResponse(content=payload, headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
 
 
 @router.get("/status", response_model=List[JobStatusOut])
@@ -349,7 +350,7 @@ async def get_jobs_status(
                 updated_at=job.updated_at,
             )
         )
-    return results
+    return JSONResponse(content=[r.dict() for r in results], headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
 
 
 

@@ -13,13 +13,17 @@ async function resolveBase(): Promise<string> {
   const base = computeRoot()
   try {
     const r = await fetch(`${base}${API_PREFIX}/health`, { method: 'GET' })
-    if (r.ok || (r.status >= 400 && r.status < 500)) { BASE = base; return BASE }
+    if (r.ok) {
+      try { const j = await r.json(); if (j && j.status === 'ok') { BASE = base; return BASE } } catch {}
+    }
   } catch {}
   try {
     const u = new URL(base)
     const f = `${u.protocol}//${u.hostname}:8000`
     const r2 = await fetch(`${f}${API_PREFIX}/health`, { method: 'GET' })
-    if (r2.ok || (r2.status >= 400 && r2.status < 500)) { BASE = f; return BASE }
+    if (r2.ok) {
+      try { const j2 = await r2.json(); if (j2 && j2.status === 'ok') { BASE = f; return BASE } } catch {}
+    }
   } catch {}
   BASE = base
   return BASE
