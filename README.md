@@ -70,6 +70,18 @@ graph LR
   - `cd lightsource-vue && npm i`
   - `npm run dev`（默认 `VITE_API_BASE_URL=http://127.0.0.1:8000`）
 
+## Docker
+- 构建：`docker build -t lightsource .`
+- 运行（Windows PowerShell）：
+  - `docker run -p 8000:8000 -v %CD%/storage/media:/app/storage/media --env-file .env lightsource`
+- 运行（Linux/macOS）：
+  - `docker run -p 8000:8000 -v $(pwd)/storage/media:/app/storage/media --env-file .env lightsource`
+- 默认容器环境：
+  - `DATABASE_URL=postgresql+psycopg2://postgres:postgres@host.docker.internal:5432/lightsource`
+  - 如需自定义，使用 `--env-file .env` 或 `-e DATABASE_URL=...` 覆盖。
+  - Linux 下如需连接宿主机数据库，可添加 `--add-host=host.docker.internal:host-gateway` 或改用宿主机 IP。
+  - 媒资目录挂载到 `storage/media/` 保持持久化。
+
 ## 环境变量
 - 必需：`DATABASE_URL`、`STORAGE_BASE`、`CORS_ORIGINS`、`JWT_SECRET`、`JWT_ACCESS_MINUTES`、`JWT_REFRESH_MINUTES`、`RATE_LIMIT_PER_MINUTE`、`BURST_LIMIT`
 - 可选：`PUBLIC_API_KEY`、`EXT_IMAGE_UPLOAD_AUTH_KEY`
