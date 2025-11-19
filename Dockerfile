@@ -1,7 +1,7 @@
 FROM node:22 AS frontend
 WORKDIR /frontend
 COPY lightsource-vue/package.json lightsource-vue/package-lock.json ./
-RUN npm ci --omit=optional
+RUN npm ci --no-audit --no-fund
 COPY lightsource-vue/ .
 RUN npm run build
 
@@ -22,7 +22,7 @@ ENV CORS_ORIGINS=["*"]
 ENV PUBLIC_API_KEY=
 ENV RATE_LIMIT_PER_MINUTE=60
 ENV BURST_LIMIT=20
-ENV JWT_SECRET=please-change-in-prod
+ENV JWT_SECRET=
 ENV JWT_ACCESS_MINUTES=15
 ENV JWT_REFRESH_MINUTES=10080
 ENV DEBUG=false
