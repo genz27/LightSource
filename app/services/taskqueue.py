@@ -12,12 +12,23 @@ class TaskQueue:
     def __init__(self) -> None:
         self.queue: asyncio.Queue[str] = asyncio.Queue()
         self.worker_task: Optional[asyncio.Task] = None
+        self._store_ref: Optional[MemoryStore] = None
 
     async def start(self, store: MemoryStore) -> None:
+        self._store_ref = store
         if self.worker_task is None or self.worker_task.done():
             self.worker_task = asyncio.create_task(self._worker(store))
 
     async def enqueue(self, job_id: str) -> None:
+        # Ensure worker started even if startup event was skipped
+        if self.worker_task is None or self.worker_task.done():
+            try:
+                if self._store_ref is None:
+                    from app.services.store import get_store
+                    self._store_ref = get_store()
+                self.worker_task = asyncio.create_task(self._worker(self._store_ref))
+            except Exception:
+                pass
         await self.queue.put(job_id)
 
     async def _worker(self, store: MemoryStore) -> None:

@@ -36,8 +36,21 @@ class Sora2Adapter:
         api_key: str | None,
         base_url: str | None,
         debug: bool | None = None,
+        duration_seconds: int | None = None,
+        resolution: str | None = None,
+        on_progress: any | None = None,
     ) -> dict:
-        return sora2_client.create_video(prompt, model=model, image=image, api_key=api_key, base_url=base_url, debug=bool(debug))
+        return sora2_client.create_video(
+            prompt,
+            model=model,
+            image=image,
+            api_key=api_key,
+            base_url=base_url,
+            debug=bool(debug),
+            duration_seconds=duration_seconds,
+            resolution=resolution,
+            on_progress=on_progress,
+        )
 
     def get_video(
         self,
@@ -85,6 +98,76 @@ class Sora2Adapter:
             image_url,
             prompt,
             model=model,
+            api_key=api_key,
+            base_url=base_url,
+            orientation=orientation,
+            duration_seconds=duration_seconds,
+            resolution=resolution,
+        )
+
+    def remix_video(
+        self,
+        video_url: str,
+        prompt: str,
+        *,
+        model: str,
+        api_key: str | None,
+        base_url: str | None,
+        orientation: str | None,
+        duration_seconds: int,
+        resolution: str | None,
+    ) -> Tuple[str | None, dict]:
+        return sora2_client.remix_video(
+            video_url,
+            prompt,
+            model=model,
+            api_key=api_key,
+            base_url=base_url,
+            orientation=orientation,
+            duration_seconds=duration_seconds,
+            resolution=resolution,
+        )
+
+    def create_role(self, video_url: str, *, api_key: str | None, base_url: str | None, debug: bool | None = None) -> dict:
+        return sora2_client.create_role(video_url, api_key=api_key, base_url=base_url, debug=bool(debug))
+
+    def create_role_and_generate(
+        self,
+        video_url: str,
+        prompt: str,
+        *,
+        model: str,
+        api_key: str | None,
+        base_url: str | None,
+        orientation: str | None,
+        duration_seconds: int,
+        resolution: str | None,
+    ) -> Tuple[str | None, dict]:
+        return sora2_client.create_role_and_generate(
+            video_url,
+            prompt,
+            model=model,
+            api_key=api_key,
+            base_url=base_url,
+            orientation=orientation,
+            duration_seconds=duration_seconds,
+            resolution=resolution,
+        )
+
+    def generate_from_chat_messages(
+        self,
+        model: str,
+        messages: list[dict],
+        *,
+        api_key: str | None,
+        base_url: str | None,
+        orientation: str | None,
+        duration_seconds: int,
+        resolution: str | None,
+    ) -> Tuple[str | None, dict]:
+        return sora2_client.generate_from_chat_messages(
+            model,
+            messages,
             api_key=api_key,
             base_url=base_url,
             orientation=orientation,

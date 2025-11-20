@@ -21,6 +21,8 @@
             <div class="input-hint">Be descriptive and specific for better results</div>
           </div>
 
+          
+
           <div class="form-group">
             <label>Mode</label>
             <select v-model="form.mode">
@@ -36,7 +38,9 @@
             <select v-if="isImageMode" v-model="form.model">
               <option v-for="m in availableModels" :key="m" :value="m">{{ m }}</option>
             </select>
-            <div v-else class="muted">Model: {{ availableModels[0] || 'sora2-video' }}</div>
+            <select v-else v-model="form.model">
+              <option v-for="m in videoModels" :key="m" :value="m">{{ m }}</option>
+            </select>
           </div>
 
           <div class="form-row">
@@ -80,23 +84,7 @@
             />
           </div>
 
-          <div class="form-group" v-if="form.mode === 'text_to_video' || form.mode === 'image_to_video'">
-            <label>Orientation</label>
-            <div class="segmented">
-              <button type="button" :class="['pill', 'segmented-item', { active: form.orientation === 'landscape' }]" @click="form.orientation = 'landscape'">
-                <svg class="segmented-icon" viewBox="0 0 24 24">
-                  <rect x="3" y="7" width="18" height="10" rx="3"/>
-                </svg>
-                <span>Landscape</span>
-              </button>
-              <button type="button" :class="['pill', 'segmented-item', { active: form.orientation === 'portrait' }]" @click="form.orientation = 'portrait'">
-                <svg class="segmented-icon" viewBox="0 0 24 24">
-                  <rect x="7" y="3" width="10" height="18" rx="3"/>
-                </svg>
-                <span>Portrait</span>
-              </button>
-            </div>
-          </div>
+          
 
           <div class="form-group" v-if="form.mode === 'image_to_image' || form.mode === 'image_to_video'">
             <label>Source Image</label>
@@ -312,8 +300,18 @@ const sourceImagePreview = ref<string | null>(null)
 const sourceImageText = ref<string>('')
 const sourceImageFile = ref<File | null>(null)
 const sourceImageFiles = ref<File[]>([])
-const sourceFilePreviews = ref<string[]>([])
-const dropActive = ref(false)
+  const sourceFilePreviews = ref<string[]>([])
+  const dropActive = ref(false)
+  
+  const isVideoMode = computed(() => form.mode === 'text_to_video' || form.mode === 'image_to_video')
+  const videoModels = computed<string[]>(() => [
+    'sora-video-10s',
+    'sora-video-15s',
+    'sora-video-landscape-10s',
+    'sora-video-landscape-15s',
+    'sora-video-portrait-10s',
+    'sora-video-portrait-15s',
+  ])
 
 const handleImageError = (event: Event) => {
   const target = event.target as HTMLImageElement
@@ -368,7 +366,14 @@ const pushResult = (jobId: string, url: string, isVideo: boolean) => {
     style: form.style,
     createdAt: new Date().toISOString()
   } as GenerationResult
-  if (isVideo) { base.video = url; base.orientation = form.orientation } else { base.image = url }
+  if (isVideo) {
+    base.video = url
+    try {
+      const m = String(jobModelMap.value[jobId] || form.model || '').toLowerCase()
+      const orient = m.includes('portrait') ? 'portrait' : (m.includes('landscape') ? 'landscape' : undefined)
+      if (orient) base.orientation = orient as 'landscape' | 'portrait'
+    } catch {}
+  } else { base.image = url }
   results.value.unshift(base)
   try { delete jobModelMap.value[jobId] } catch {}
 }
@@ -531,7 +536,7 @@ const generateContent = async () => {
       else { isGenerating.value = false }
     } else if (form.mode === 'image_to_video') {
       if (!sourceImageText.value) throw new Error('source image required')
-      const modelName = `sora2-video-${form.orientation}`
+      const modelName = form.model || (videoModels.value[0] || 'sora-video-10s')
       const payload: Record<string, unknown> = { model: modelName, prompt: form.prompt, image: sourceImageText.value }
       const res = await post('/v1/videos', payload)
       const videoId = (res && (res.video_id as string)) || null
@@ -539,7 +544,7 @@ const generateContent = async () => {
       if (videoId) await pollStatus(videoId)
       else { isGenerating.value = false }
     } else if (form.mode === 'text_to_video') {
-      const modelName = `sora2-video-${form.orientation}`
+      const modelName = form.model || (videoModels.value[0] || 'sora-video-10s')
       const payload: Record<string, unknown> = { model: modelName, prompt: form.prompt }
       const res = await post('/v1/videos', payload)
       const videoId = (res && (res.video_id as string)) || null
@@ -701,8 +706,19 @@ onMounted(async () => {
 })
 
 watch(() => form.mode, () => {
-  form.model = availableModels.value[0] || (isImageMode.value ? 'qwen-image' : 'sora2-video')
+  form.model = isImageMode.value ? (availableModels.value[0] || 'qwen-image') : (videoModels.value[0] || 'sora-video-landscape-10s')
 })
+
+watch(() => form.model, (val) => {
+  if (!isVideoMode.value) return
+  const m = String(val || '').toLowerCase()
+  const parsedOrientation = m.includes('portrait') ? 'portrait' : (m.includes('landscape') ? 'landscape' : form.orientation)
+  if (parsedOrientation && form.orientation !== parsedOrientation) form.orientation = parsedOrientation as 'landscape' | 'portrait'
+})
+
+
+
+
 </script>
 
 <style scoped>

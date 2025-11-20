@@ -68,7 +68,7 @@ async def create_video(
 
     orientation = _infer_orientation(model) or Orientation.LANDSCAPE
     kind = JobKind.IMAGE_TO_VIDEO if image else JobKind.TEXT_TO_VIDEO
-    internal_model = "sora2-video"
+    internal_model = model
     params = JobParams(orientation=orientation, extras={})
     if image:
         params.extras["source_image_url"] = image

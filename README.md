@@ -20,28 +20,14 @@
 
 ## 接口层（Providers）
 - 位置：`app/interface/`，封装与外部模型/视频服务的交互，统一调用与返回结构。
-- 抽象协议：`Provider` 定义 `generate(request, job)`（`app/interface/base.py:8–10`）。
-- 适配器注册：
-  - `resolve_adapter(name)` 返回具体适配器（`app/interface/registry.py:96–105`）。
-  - `QwenAdapter` 图像生成/编辑（`app/interface/registry.py:11–16`）。
-  - `FluxAdapter` 图像生成（`app/interface/registry.py:19–23`）。
-  - `MajicFlusAdapter` 图像生成（`app/interface/registry.py:24–27`）。
-  - `Sora2Adapter` 视频创建/查询/生成（`app/interface/registry.py:29–93`）。
-- Qwen（ModelScope）：
-  - 模型映射 `MODEL_MAP`（`app/interface/qwen.py:16–19`）。
-  - 文生图 `generate_image`（`app/interface/qwen.py:54–115`）。
-  - 以图编辑 `edit_image`（`app/interface/qwen.py:118–186`）。
-- Flux（ModelScope）：文生图 `generate_image`（`app/interface/flux.py:32–56`）。
-- MajicFlus（ModelScope）：文生图 `generate_image`（`app/interface/majicflus.py:32–56`）。
-- Sora2（视频）：
-  - 创建视频 `create_video`（`app/interface/sora2.py:48–92`）。
-  - 查询视频 `get_video`（`app/interface/sora2.py:95–129`）。
-  - 文生视频 `generate_video`（`app/interface/sora2.py:132–167`）。
-  - 以图生视频 `image_to_video`（`app/interface/sora2.py:170–205`）。
-- 生成编排：在 `app/services/generation.py` 中按 Job 类型调用适配器：
-  - 解析适配器并分发任务（`app/services/generation.py:49–51, 67–88`）。
-  - Sora2 视频创建与元信息写入（`app/services/generation.py:100–127`）。
-  - 查询视频详情并填充结果（`app/services/generation.py:163–184`）。
+- 适配器注册：`resolve_adapter(name)` 返回具体适配器（见 `app/interface/registry.py`）。
+- Qwen（ModelScope）：`app/interface/qwen.py` 提供文生图与以图编辑。
+- Flux（ModelScope）：`app/interface/flux.py` 提供文生图。
+- MajicFlus（ModelScope）：`app/interface/majicflus.py` 提供文生图。
+- Sora2（视频）：`app/interface/sora2.py` 提供视频生成与查询，现采用 OpenAI 标准接口 `v1/chat/completions` 的流式生成：
+  - `create_video(prompt, model, image?)`：发送 `messages`，启用 `stream: true`，消费流中的进度与最终 `<video src='...'>`，提取 `video_url`。
+  - `get_video(video_id)`：若 `video_id` 为 `url:<base64(url)>`，直接解码返回 `video_url`；否则返回 `processing`。
+- 生成编排：`app/services/generation.py` 按 Job 类型调用适配器并管理生命周期与进度（queued → running → completed/failed）。
 
 ## 快速开始
 - 后端
@@ -76,6 +62,27 @@
   - 生成：`/api/v1/images`、`/api/v1/videos`
   - 管理：`/api/admin/*`
   - 指标与健康：`/api/metrics`、`/api/health`
+
+## 视频模型与流式生成
+- 支持的视频模型（由模型名同时决定方向与时长）：
+  - `sora-video-10s`（横屏，10 秒）
+  - `sora-video-15s`（横屏，15 秒）
+  - `sora-video-landscape-10s`（横屏，10 秒）
+  - `sora-video-landscape-15s`（横屏，15 秒）
+  - `sora-video-portrait-10s`（竖屏，10 秒）
+  - `sora-video-portrait-15s`（竖屏，15 秒）
+- 请求流程：
+  - 前端调用程序后端 `POST /api/v1/videos` 创建任务；后端将请求转发到外部 `https://sora2api.airgzn.top/v1/chat/completions`（流式）。
+  - 程序后端消费外部流的进度块（如 36%、62%、81%、98%）并实时更新任务 `progress`。
+  - 当流的最后块返回 `<video src='...'>` 或直接链接时，后端写入 `result_url/video_url` 并完成任务。
+- 前端生成器：
+  - 视频模式仅选择“Model”，不再单独选择 Orientation/Duration；模型名联动展示与结果。
+  - 任务进度显示为本地轮询与外部流结合的实时百分比。
+
+## 配置与调试
+- Provider 基础地址：Sora2 默认 `https://sora2api.airgzn.top/`。
+- 公共 API Key：如启用，`PUBLIC_API_KEY` 将用于校验外部视频生成 API 调用。
+- 调试：在任务 `params.extras.provider_debug` 中可查看外部请求/响应的摘要（请求方法、URL、头、响应片段与耗时）。
 
 ## 前端 API 地址配置
 - 默认自动跟随主机：`protocol://hostname:8000`，请求统一加 `/api` 前缀。

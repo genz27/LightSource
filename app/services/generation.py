@@ -44,6 +44,22 @@ async def simulate_generation(
     # If this is a Qwen text-to-image job and channel is configured,
     # kick off provider call in a background thread while we stream progress.
     qwen_task: asyncio.Task | None = None
+    sora_task: asyncio.Task | None = None
+    provider_progress_val: float = 1.0
+    loop = asyncio.get_running_loop()
+    async def _apply_progress(val: float):
+        v = float(max(1.0, min(95.0, val)))
+        nonlocal job
+        job = store.update_job(job.id, progress=v)
+        async with SessionLocal() as session:
+            await update_job_fields(session, job.id, progress=v)
+    def _on_provider_progress(val: float):
+        nonlocal provider_progress_val
+        try:
+            provider_progress_val = float(val)
+            asyncio.run_coroutine_threadsafe(_apply_progress(val), loop)
+        except Exception:
+            pass
     attempted_external = False
     async with SessionLocal() as session:
         provider = await get_provider_by_name(session, job.provider) if job.provider else None
@@ -94,31 +110,49 @@ async def simulate_generation(
             "1024x576" if (job.params.orientation or "landscape") == "landscape" else "576x1024"
         )
         orientation_str = (job.params.orientation.value if job.params.orientation else None)
-        model_to_send = (
-            f"sora-video-{orientation_str}" if orientation_str in ("landscape", "portrait") else (job.model or "sora2-video")
-        )
+        m_eff = job.model or ""
+        if m_eff and ("sora-video" in m_eff):
+            model_to_send = m_eff
+        else:
+            model_to_send = (
+                f"sora-video-{orientation_str}" if orientation_str in ("landscape", "portrait") else (job.model or "sora2-video")
+            )
+        duration_eff = 6
+        try:
+            m_lower = (model_to_send or "").lower()
+            if "10s" in m_lower:
+                duration_eff = 10
+            elif "15s" in m_lower:
+                duration_eff = 15
+        except Exception:
+            duration_eff = 6
         src_url_boot = job.params.extras.get("source_image_url") if job.params and job.params.extras else None
         try:
             base_eff = provider.base_url
             if not base_eff or ("sora2.example" in str(base_eff).lower() or str(base_eff).lower().endswith(".example")):
                 base_eff = None
-            data_boot = adapter.create_video(
-                job.prompt,
-                model=model_to_send,
-                image=(src_url_boot or None),
-                api_key=provider.api_token,
-                base_url=base_eff,
-                debug=getattr(store, "debug_enabled", False),
+            sora_task = asyncio.create_task(
+                asyncio.to_thread(
+                    adapter.create_video,
+                    job.prompt,
+                    model=model_to_send,
+                    image=(src_url_boot or None),
+                    api_key=provider.api_token,
+                    base_url=base_eff,
+                    debug=getattr(store, "debug_enabled", False),
+                    duration_seconds=duration_eff,
+                    resolution=resolution_boot,
+                    on_progress=_on_provider_progress,
+                )
             )
-            vendor_video_id = (data_boot or {}).get("video_id")
             provider_response_boot = {
                 "provider": "sora2",
                 "model": model_to_send,
-                "status": (data_boot or {}).get("status") or "queued",
+                "status": "processing",
                 "orientation": orientation_str,
-                "duration_seconds": 6,
+                "duration_seconds": duration_eff,
                 "resolution": resolution_boot,
-                "raw": data_boot,
+                "raw": {"boot": True},
             }
             params_boot = job.params
             extras_boot = dict(getattr(params_boot, "extras", {}) or {})
@@ -142,9 +176,10 @@ async def simulate_generation(
                 metrics.record_transition(JobStatus.RUNNING, JobStatus.CANCELED)
                 metrics.mark_finished(job.id)
                 return
-            job = store.update_job(job.id, progress=progress)
+            tgt = float(max(progress, provider_progress_val, float(job.progress or 0)))
+            job = store.update_job(job.id, progress=tgt)
             async with SessionLocal() as session:
-                await update_job_fields(session, job.id, progress=progress)
+                await update_job_fields(session, job.id, progress=tgt)
         
 
         # If we dispatched a provider task, wait for completion and capture provider response.
@@ -160,24 +195,29 @@ async def simulate_generation(
                     "error": str(exc),
                 }
 
-        if provider and provider.enabled and adapter and job.kind in {JobKind.TEXT_TO_VIDEO, JobKind.IMAGE_TO_VIDEO} and vendor_video_id:
+        if provider and provider.enabled and adapter and job.kind in {JobKind.TEXT_TO_VIDEO, JobKind.IMAGE_TO_VIDEO} and sora_task is not None:
             attempted_external = True
             resolution = job.params.size or ("1024x576" if (job.params.orientation or "landscape") == "landscape" else "576x1024")
             duration_seconds = 6
             try:
-                base_eff = provider.base_url
-                if not base_eff or ("sora2.example" in str(base_eff).lower() or str(base_eff).lower().endswith(".example")):
-                    base_eff = None
-                detail = adapter.get_video(vendor_video_id, api_key=provider.api_token, base_url=base_eff, debug=getattr(store, "debug_enabled", False))
-                video_url = (detail or {}).get("video_url") or (detail or {}).get("result_url")
+                m_lower = str(job.model or "").lower()
+                if "10s" in m_lower:
+                    duration_seconds = 10
+                elif "15s" in m_lower:
+                    duration_seconds = 15
+            except Exception:
+                duration_seconds = 6
+            try:
+                data_done = await sora_task
+                video_url = (data_done or {}).get("video_url") or (data_done or {}).get("result_url")
                 provider_response = {
                     "provider": "sora2",
-                    "model": (detail or {}).get("model") or (job.model or "sora2-video"),
-                    "status": (detail or {}).get("status") or ("succeeded" if video_url else "processing"),
+                    "model": (data_done or {}).get("model") or (job.model or "sora2-video"),
+                    "status": (data_done or {}).get("status") or ("succeeded" if video_url else "processing"),
                     "orientation": (job.params.orientation.value if job.params.orientation else None),
                     "duration_seconds": duration_seconds,
                     "resolution": resolution,
-                    "raw": detail,
+                    "raw": data_done,
                 }
                 if provider_response and video_url:
                     image_url = video_url
@@ -188,6 +228,15 @@ async def simulate_generation(
         is_image = job.kind == JobKind.TEXT_TO_IMAGE
         frames = 1 if is_image else 20
         duration_seconds = 0 if is_image else 6
+        if not is_image:
+            try:
+                m_lower = str(job.model or "").lower()
+                if "10s" in m_lower:
+                    duration_seconds = 10
+                elif "15s" in m_lower:
+                    duration_seconds = 15
+            except Exception:
+                pass
         resolution = job.params.size or ("1024x1024" if is_image else ("1024x576" if (job.params.orientation or "landscape") == "landscape" else "576x1024"))
         finished_at = dt.datetime.utcnow().isoformat() + "Z"
 
@@ -206,17 +255,32 @@ async def simulate_generation(
         params = job.params
         extras = dict(getattr(params, "extras", {}) or {})
         extras["provider_response"] = provider_response
+        try:
+            raw = provider_response.get("raw") if isinstance(provider_response, dict) else None
+            dbg = raw.get("debug") if isinstance(raw, dict) else None
+            if dbg:
+                extras["provider_debug"] = dbg
+        except Exception:
+            pass
         params.extras = extras
         job = store.update_job(job.id, params=params)
         async with SessionLocal() as session:
             await update_job_fields(session, job.id, params=params.dict() if hasattr(params, "dict") else params)
 
         if attempted_external and not _valid_url(image_url):
+            err_payload = provider_response
+            try:
+                extras = job.params.extras if job.params and job.params.extras else {}
+                boot = extras.get("provider_response")
+                if boot:
+                    err_payload = boot
+            except Exception:
+                pass
             async with SessionLocal() as session:
-                await update_job_fields(session, job.id, status=JobStatus.FAILED, error=str(provider_response))
+                await update_job_fields(session, job.id, status=JobStatus.FAILED, error=str(err_payload))
             metrics.record_transition(JobStatus.RUNNING, JobStatus.FAILED)
             metrics.mark_finished(job.id)
-            store.update_job(job.id, status=JobStatus.FAILED, error=str(provider_response))
+            store.update_job(job.id, status=JobStatus.FAILED, error=str(err_payload))
             return
         output_url = image_url if _valid_url(image_url) else placeholder_output(job.kind.value, job.id)[1]
 
