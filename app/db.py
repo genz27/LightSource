@@ -52,6 +52,13 @@ async def ensure_database_and_schema() -> None:
             pass
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        try:
+            await conn.execute(text("ALTER TABLE jobs ALTER COLUMN error TYPE TEXT"))
+        except Exception:
+            try:
+                await conn.execute(text("ALTER TABLE public.jobs ALTER COLUMN error TYPE TEXT"))
+            except Exception:
+                pass
     try:
         async with SessionLocal() as s:
             await ensure_default_providers(s)

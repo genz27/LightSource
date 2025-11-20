@@ -97,6 +97,26 @@ async def update_job_fields(session: AsyncSession, job_id: str, **fields) -> Non
     if not job:
         return
     for key, value in fields.items():
+        if key == "error":
+            try:
+                if isinstance(value, str):
+                    if len(value) > 255:
+                        job.error = value[:255]
+                        try:
+                            params = dict(job.params or {})
+                            extras = dict(params.get("extras") or {})
+                            extras["error_detail"] = value
+                            params["extras"] = extras
+                            job.params = params
+                        except Exception:
+                            pass
+                    else:
+                        job.error = value
+                else:
+                    job.error = str(value)
+            except Exception:
+                job.error = "provider_error"
+            continue
         if key in {"status"} and isinstance(value, JobStatus):
             value = JobStatusDB(value.value)
         setattr(job, key, value)
