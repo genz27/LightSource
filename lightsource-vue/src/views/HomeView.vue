@@ -2,15 +2,71 @@
   <AppLayout>
     <!-- Hero Section -->
     <section class="hero">
-      <div class="hero-content">
-        <h1>LightSource</h1>
-        <p>AI-powered creative tools for the next generation of digital artists and developers.</p>
-        <div class="hero-actions">
-          <RouterLink to="/auth" class="pill accent">Get Started</RouterLink>
-        </div>
-      </div>
       <div class="hero-background">
-        <img src="https://trae-api-sg.mchost.guru/api/ide/v1/text_to_image?prompt=minimalist%20abstract%20geometric%20background%20with%20soft%20gradient%20shapes%2C%20clean%20and%20modern%20design%2C%20subtle%20lighting%2C%20professional%20quality&image_size=landscape_16_9" alt="Background" />
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+      </div>
+      <div class="hero-inner">
+        <div class="hero-content">
+          <div class="eyebrow">Create boldly with AI</div>
+          <h1>LightSource</h1>
+          <p>AI-powered creative tools for the next generation of digital artists and developers.</p>
+          <div class="hero-actions">
+            <RouterLink to="/auth" class="pill accent">Start for free</RouterLink>
+            <RouterLink to="/generator" class="ghost">Launch Studio</RouterLink>
+          </div>
+          <div class="hero-stats">
+            <div class="stat">
+              <span class="stat-value">10k+</span>
+              <span class="stat-label">Projects launched</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value">98%</span>
+              <span class="stat-label">Customer satisfaction</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value">Instant</span>
+              <span class="stat-label">Preview results</span>
+            </div>
+          </div>
+        </div>
+        <div class="hero-panel">
+          <div class="panel-header">
+            <span class="pill soft">Live demo</span>
+            <span class="muted">Generate in seconds</span>
+          </div>
+          <div class="panel-body">
+            <div class="panel-preview">
+              <div class="preview-badge">Video</div>
+              <video
+                src="https://trae-api-sg.mchost.guru/api/ide/v1/text_to_video?prompt=floating%20glass%20orbs%20over%20a%20neon%20grid%20landscape%20at%20dusk%2C%20cinematic%20lighting%2C%20slow%20pan&image_size=landscape_16_9"
+                autoplay
+                loop
+                muted
+                playsinline
+              ></video>
+              <div class="preview-overlay">
+                <p>“Cinematic dreamscape in neon.”</p>
+                <span>Render time · 9s</span>
+              </div>
+            </div>
+            <div class="panel-meta">
+              <div class="meta-row">
+                <span class="label">Mode</span>
+                <span class="value">Text → Video</span>
+              </div>
+              <div class="meta-row">
+                <span class="label">Model</span>
+                <span class="value">Sora</span>
+              </div>
+              <div class="meta-row">
+                <span class="label">Quality</span>
+                <span class="value">4K ready</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -214,123 +270,226 @@ const playDemo = () => {
 <style scoped>
 .hero {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 40vh;
-  padding: var(--space-8, 64px) 0;
-  text-align: center;
   overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(167, 139, 250, 0.08));
+  padding: clamp(32px, 6vw, 80px);
+  margin-bottom: 48px;
+}
+
+.hero-inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 32px;
+  align-items: center;
+  z-index: 1;
+}
+
+.hero-background {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  filter: blur(20px);
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  opacity: 0.6;
+  animation: float 12s ease-in-out infinite;
+}
+
+.orb-1 {
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.45), transparent 60%);
+  top: -80px;
+  left: -120px;
+}
+
+.orb-2 {
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.38), transparent 55%);
+  bottom: -40px;
+  right: -120px;
+  animation-delay: -4s;
+}
+
+.orb-3 {
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.3), transparent 55%);
+  top: 30%;
+  right: 30%;
+  animation-delay: -2s;
 }
 
 .hero-content {
   position: relative;
-  z-index: 2;
-  max-width: 800px;
-  margin: 0 auto;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  text-align: left;
+}
+
+.eyebrow {
+  align-self: flex-start;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--accent);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 12px;
 }
 
 .hero-content h1 {
-  font-size: 72px;
+  font-size: clamp(48px, 8vw, 82px);
   font-weight: 800;
-  line-height: 1.1;
-  margin-bottom: 32px;
-  background: linear-gradient(135deg, var(--accent) 0%, #ffffff 100%);
+  line-height: 1.05;
+  margin: 0;
+  background: linear-gradient(135deg, #fff 0%, var(--accent) 40%, #a855f7 80%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .hero-content p {
-  font-size: 24px;
+  font-size: 20px;
   line-height: 1.6;
   color: var(--muted);
-  margin-bottom: 48px;
+  margin: 0;
 }
 
 .hero-actions {
   display: flex;
-  justify-content: center;
-  gap: 24px;
+  gap: 16px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
-.hero-background {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-  opacity: 0.3;
-}
-
-.hero-background img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: blur(2px);
-}
-
-.hero-visual {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.media-showcase {
+.hero-stats {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  max-width: 480px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-top: 8px;
 }
 
-.media-item {
-  aspect-ratio: 1;
+.stat {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px 14px;
+  backdrop-filter: blur(10px);
+}
+
+.stat-value {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.hero-panel {
+  position: relative;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.35);
+  backdrop-filter: blur(16px);
+  min-height: 360px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.panel-body {
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.panel-preview {
+  position: relative;
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid var(--border);
-  animation: fadeInUp 0.6s ease-out var(--delay) both;
-  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: radial-gradient(circle at 30% 30%, rgba(59, 130, 246, 0.12), transparent 55%), rgba(255, 255, 255, 0.02);
 }
 
-.media-item.large {
-  grid-column: span 2;
-  grid-row: span 2;
-  aspect-ratio: 16/9;
-}
-
-.media-item img {
+.panel-preview video {
   width: 100%;
   height: 100%;
+  max-height: 280px;
   object-fit: cover;
+  display: block;
 }
 
-.media-overlay {
+.preview-badge {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 12px;
+  left: 12px;
+  padding: 6px 10px;
+  background: rgba(59, 130, 246, 0.22);
+  color: #fff;
+  border-radius: 10px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.preview-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.6));
+  color: #fff;
+}
+
+.panel-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.meta-row {
   display: flex;
-  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #e2e8f0;
 }
 
-.media-type {
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
+.meta-row .label {
+  color: rgba(226, 232, 240, 0.7);
+  font-size: 13px;
 }
 
-.media-time {
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
+.meta-row .value {
+  font-weight: 600;
+  font-size: 14px;
 }
 
 /* Demo Section */
@@ -618,19 +777,25 @@ const playDemo = () => {
   }
 }
 
+@keyframes float {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0); }
+}
+
 /* Desktop (1200px and up) */
 @media (min-width: 1200px) {
   .hero {
-    padding: var(--space-8, 64px) 0;
-    min-height: 50vh;
+    padding: 80px;
+    min-height: 55vh;
   }
-  
+
   .hero-content h1 {
-    font-size: 84px;
+    font-size: 88px;
   }
-  
+
   .hero-content p {
-    font-size: 28px;
+    font-size: 26px;
   }
   
   .features {
@@ -641,16 +806,16 @@ const playDemo = () => {
 /* Tablet (768px to 1199px) */
 @media (min-width: 768px) and (max-width: 1199px) {
   .hero {
-    padding: var(--space-6, 48px) 0;
-    min-height: 40vh;
+    padding: 56px;
+    min-height: 45vh;
   }
-  
+
   .hero-content h1 {
     font-size: 64px;
   }
-  
+
   .hero-content p {
-    font-size: 22px;
+    font-size: 20px;
   }
   
   .demo-section {
@@ -719,10 +884,19 @@ const playDemo = () => {
 /* Mobile (767px and below) */
 @media (max-width: 767px) {
   .hero {
-    padding: var(--space-4, 32px) 0;
-    min-height: 30vh;
+    padding: var(--space-4, 32px);
+    min-height: 40vh;
   }
-  
+
+  .hero-inner {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-content {
+    text-align: center;
+    align-items: center;
+  }
+
   .hero-content h1 {
     font-size: 48px;
   }
