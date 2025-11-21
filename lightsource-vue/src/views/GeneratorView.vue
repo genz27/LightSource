@@ -238,6 +238,7 @@
 import AppLayout from '@/components/AppLayout.vue'
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { get, post } from '@/api/client'
+import { listAssets as listAssetsApi } from '@/api/assets'
 
 interface GenerationResult {
   id: string
@@ -404,6 +405,39 @@ const pushResult = (jobId: string, url: string, isVideo: boolean) => {
     results.value = results.value.slice(0, 3)
   }
   try { delete jobModelMap.value[jobId] } catch {}
+}
+
+type AssetDTO = { id: string; type: 'image' | 'video' | 'audio'; url: string; preview_url?: string | null; meta?: Record<string, any> | null; created_at: string }
+
+const mapAssetToResult = (asset: AssetDTO): GenerationResult => {
+  const meta = (asset.meta || {}) as Record<string, any>
+  const providerResp = (meta.provider_response || {}) as Record<string, any>
+  const request = (providerResp.request || {}) as Record<string, any>
+  const rawInput = ((providerResp.raw || {}).input || {}) as Record<string, any>
+  const size = typeof meta.size === 'string'
+    ? meta.size
+    : (request.size as string) || ((rawInput.width && rawInput.height) ? `${rawInput.width}x${rawInput.height}` : '')
+  const model = (meta.model as string) || (providerResp.model as string) || '—'
+  const prompt = (request.prompt as string) || (meta.prompt as string) || ''
+  const orientation = (meta.orientation as GenerationResult['orientation']) || (request.orientation as GenerationResult['orientation']) || (rawInput.orientation as GenerationResult['orientation'])
+  const seed = (meta.seed ?? rawInput.seed) as number | null | undefined
+  const style = (meta.style as string) || ''
+  const base: GenerationResult = {
+    id: asset.id,
+    prompt,
+    model,
+    size: size || '1024x1024',
+    seed: typeof seed === 'number' ? seed : null,
+    style,
+    createdAt: asset.created_at,
+    orientation: orientation || undefined
+  }
+  if (asset.type === 'video') {
+    base.video = asset.url
+  } else {
+    base.image = asset.preview_url || asset.url
+  }
+  return base
 }
 
 const onSelectSourceImages = (e: Event) => {
