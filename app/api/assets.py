@@ -6,7 +6,7 @@ from fastapi import UploadFile, File, Form
 from app.deps.auth import get_current_user_optional, get_current_user
 from app.db import get_session
 from app.schemas import AssetList, AssetOut, AssetType, UserOut
-from app.services.persistence import delete_asset_db, list_assets_db, update_asset_fields
+from app.services.persistence import delete_asset_db, list_assets_db, list_assets_filtered, update_asset_fields
 from app.services.storage import delete_asset_files
 from app.services.storage import ensure_storage_dir
 from app.config import get_settings
@@ -31,17 +31,36 @@ async def list_assets(
     current_user: UserOut | None = Depends(get_current_user_optional),
     session: AsyncSession = Depends(get_session),
 ) -> AssetList:
-    offset = (max(1, page) - 1) * max(1, min(100, limit))
-    items = await list_assets_db(session, asset_type=type, provider=provider, public_only=public, offset=offset, limit=limit)
-    if current_user is None:
-        items = [a for a in items if a.is_public]
-    elif not _is_admin(current_user):
-        items = [a for a in items if a.is_public or a.owner_id == current_user.id]
+    safe_limit = max(1, min(100, limit))
+    offset = (max(1, page) - 1) * safe_limit
+
     if owner_only:
         if current_user is None:
             items = []
         else:
-            items = [a for a in items if a.owner_id == current_user.id]
+            items = await list_assets_filtered(
+                session,
+                asset_type=type,
+                provider=provider,
+                public_only=public,
+                owner_id=current_user.id,
+                offset=offset,
+                limit=safe_limit,
+            )
+    else:
+        items = await list_assets_db(
+            session,
+            asset_type=type,
+            provider=provider,
+            public_only=public,
+            offset=offset,
+            limit=safe_limit,
+        )
+        if current_user is None:
+            items = [a for a in items if a.is_public]
+        elif not _is_admin(current_user):
+            items = [a for a in items if a.is_public or a.owner_id == current_user.id]
+
     total = len(items)
     try:
         from app.services.persistence import count_assets_db
