@@ -91,12 +91,24 @@ async def simulate_generation(
                     size=job.params.size,
                 )
             )
+        elif provider.name == "sora":
+            qwen_task = asyncio.create_task(
+                asyncio.to_thread(
+                    adapter.generate_image,
+                    job.prompt,
+                    model=job.model or "sora-image",
+                    api_key=provider.api_token,
+                    base_url=provider.base_url or "",
+                    size=job.params.size,
+                    image_url=src_url or None,
+                )
+            )
         else:
             qwen_task = asyncio.create_task(
                 asyncio.to_thread(
                     adapter.generate_image,
                     job.prompt,
-                    model=job.model or "qwen-image",
+                    model=job.model or ((provider.models or ["qwen-image"])[0]),
                     api_key=provider.api_token,
                     base_url=provider.base_url or "",
                     size=job.params.size,
