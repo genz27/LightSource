@@ -1117,7 +1117,12 @@ watch(() => form.model, (val) => {
 
 .results-header .count { margin-left: 8px; font-size: 12px; color: var(--muted); }
 .small-btn { padding: 6px 10px; font-size: 12px; }
-.task-card { display: flex; align-items: center; }
+.task-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  grid-column: 1 / -1;
+}
 .task-body { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 10px 12px; }
 .task-left { display: grid; grid-template-columns: minmax(52px, auto) minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; min-width: 0; }
 .task-id { font-weight: 600; }
