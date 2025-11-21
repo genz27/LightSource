@@ -43,6 +43,18 @@
             </select>
           </div>
 
+          <div class="form-group">
+            <label>Count</label>
+            <input 
+              type="number" 
+              min="1" 
+              max="5" 
+              v-model.number="form.count" 
+              placeholder="1"
+            />
+            <div class="input-hint">How many tasks to create (1–5)</div>
+          </div>
+
           <div class="form-row">
             <div class="form-group" v-if="isImageMode">
               <label>Size</label>
@@ -110,24 +122,15 @@
               <button 
                 type="submit" 
                 class="pill accent"
-                :disabled="isGenerating || (((form.mode === 'text_to_video') || (form.mode === 'image_to_video')) && walletBalance !== null && walletBalance < estimatedCost)"
+                :disabled="(((form.mode === 'text_to_video') || (form.mode === 'image_to_video')) && walletBalance !== null && walletBalance < estimatedCost)"
               >
-                {{ isGenerating ? 'Generating...' : 'Generate' }}
+                Generate
               </button>
-            <button 
-              v-if="currentJobId"
-              type="button" 
-              class="ghost"
-              @click="cancelCurrentJob"
-              :disabled="isGenerating && currentStatus === 'running'"
-            >
-              Cancel Job
-            </button>
+            
             <button 
               type="button" 
               class="ghost"
               @click="resetForm"
-              :disabled="isGenerating"
             >
               Reset
             </button>
@@ -153,11 +156,22 @@
               </svg>
               <p>Your generated content will appear here</p>
             </div>
-            <div v-if="isGenerating" class="workspace-overlay">
-              <div class="loader"></div>
-              <p>Job {{ currentJobId }} · {{ currentStatus }} · {{ progress }}%</p>
+            
+          </div>
+        </div>
+
+        <div class="tasks-header">
+          <h3>Tasks <span class="count" v-if="tasks.length">{{ tasks.length }}</span></h3>
+          <div class="tasks-list" v-if="tasks.length">
+            <div class="task-item" v-for="t in tasks" :key="t.id">
+              <span class="task-id">{{ t.id }}</span>
+              <span class="task-model">{{ t.model }}</span>
+              <span class="task-status">{{ t.status }}</span>
+              <span class="task-progress">{{ t.progress }}%</span>
+              <button class="pill" @click="cancelTask(t.id)" :disabled="t.status === 'canceled' || t.status === 'failed' || t.status === 'completed'">Cancel</button>
             </div>
           </div>
+          <div v-else class="empty-state">No active tasks</div>
         </div>
 
         <div class="results-header">
@@ -165,7 +179,7 @@
           <button class="pill" @click="clearResults">Clear All</button>
         </div>
 
-        <div v-if="results.length === 0 && !isGenerating" class="empty-state">
+        <div v-if="results.length === 0" class="empty-state">
           <svg class="minimal-icon" viewBox="0 0 48 48">
             <rect x="6" y="10" width="36" height="28" rx="4"/>
             <circle cx="16" cy="20" r="3"/>
@@ -241,6 +255,7 @@ interface GenerationForm {
   seed: number | null
   style: string
   orientation: 'landscape' | 'portrait'
+  count: number
 }
 
 const form = reactive<GenerationForm>({
@@ -250,7 +265,8 @@ const form = reactive<GenerationForm>({
   size: '1024x1024',
   seed: null,
   style: '',
-  orientation: 'landscape'
+  orientation: 'landscape',
+  count: 1
 })
 
 interface ProviderInfo { name: string; display_name?: string; models: string[]; capabilities: string[]; enabled: boolean; notes?: string; base_url?: string }
@@ -288,13 +304,11 @@ const availableModels = computed<string[]>(() => {
 const results = ref<GenerationResult[]>([])
 const jobModelMap = ref<Record<string, string>>({})
 const latestResult = computed((): GenerationResult | null => results.value[0] ?? null)
-const isGenerating = ref(false)
 const fullSizeResult = ref<GenerationResult | null>(null)
-const currentJobId = ref<string | null>(null)
-const currentStatus = ref<string>('queued')
-const progress = ref<number>(0)
+interface GenTask { id: string; status: string; progress: number; model: string; prompt: string; isVideo: boolean }
+const tasks = ref<GenTask[]>([])
+const pollTimers: Record<string, number> = {}
 const lastCharge = ref<number>(0)
-let pollTimer: number | null = null
 const isImageMode = computed(() => form.mode === 'text_to_image' || form.mode === 'image_to_image')
 const sourceImagePreview = ref<string | null>(null)
 const sourceImageText = ref<string>('')
@@ -321,23 +335,18 @@ const handleImageError = (event: Event) => {
 //
 
 const pollStatus = async (jobId: string) => {
-  if (pollTimer !== null) { clearInterval(pollTimer); pollTimer = null }
-  currentJobId.value = jobId
-  pollTimer = window.setInterval(async () => {
+  if (pollTimers[jobId]) { clearInterval(pollTimers[jobId]); delete pollTimers[jobId] }
+  pollTimers[jobId] = window.setInterval(async () => {
     try {
       const s = await get(`/jobs/${jobId}/status`)
-      currentStatus.value = s.status
-      progress.value = s.progress
+      const idx = tasks.value.findIndex(t => t.id === jobId)
+      if (idx > -1) { const t = tasks.value[idx]; if (t) { t.status = s.status; t.progress = s.progress } }
       if (s.status === 'completed' || s.status === 'failed' || s.status === 'canceled') {
-        if (pollTimer !== null) { clearInterval(pollTimer); pollTimer = null }
-        isGenerating.value = false
-        if (s.status === 'completed') {
-          await loadResult(jobId)
-        }
+        if (pollTimers[jobId]) { clearInterval(pollTimers[jobId]); delete pollTimers[jobId] }
+        if (s.status === 'completed') { await loadResult(jobId) }
       }
     } catch {
-      if (pollTimer !== null) { clearInterval(pollTimer); pollTimer = null }
-      isGenerating.value = false
+      if (pollTimers[jobId]) { clearInterval(pollTimers[jobId]); delete pollTimers[jobId] }
     }
   }, 1500)
 }
@@ -489,11 +498,15 @@ const generateContent = async () => {
     }
     const kindForPrice = form.mode === 'image_to_image' ? 'image_to_image' : form.mode
     const required = Number((prices.value as Record<string, number>)[kindForPrice]) || 0
+    const nRaw = Number(form.count)
+    const n = Number.isFinite(nRaw) ? Math.max(1, Math.min(5, Math.floor(nRaw))) : 1
+    const requiredTotal = required * n
     try {
       const w = await get('/billing/wallet') as { balance: number }
       walletBalance.value = typeof w?.balance === 'number' ? w.balance : walletBalance.value
       const isVideoKind = (form.mode === 'text_to_video') || (form.mode === 'image_to_video')
-      if (typeof w?.balance === 'number' && isVideoKind && w.balance < required) {
+      const isEditKind = (form.mode === 'image_to_image') && (String(form.model || '').includes('edit'))
+      if (typeof w?.balance === 'number' && (isVideoKind || isEditKind) && w.balance < requiredTotal) {
         alert('Insufficient balance. Cannot generate content.')
         return
       }
@@ -503,15 +516,13 @@ const generateContent = async () => {
       form.mode = 'text_to_image'
       form.model = availableModels.value[0] || 'qwen-image'
     }
-    isGenerating.value = true
-    currentStatus.value = 'queued'
-    progress.value = 0
+    
     if (form.mode === 'image_to_image' && (form.model || '').includes('edit')) {
       if (!sourceImageText.value && sourceImageFiles.value.length === 0) throw new Error('source image required')
       const textVal = (sourceImageText.value || '').trim()
       const urls: string[] = []
       if (sourceImageFiles.value.length > 0) {
-        currentStatus.value = 'uploading'
+        
         for (const f of sourceImageFiles.value) {
           const u = await uploadToExternal(f)
           urls.push(u)
@@ -524,33 +535,58 @@ const generateContent = async () => {
       const payload: Record<string, unknown> = { model: form.model || (availableModels.value[0] ?? 'qwen-image-edit'), prompt: form.prompt, size: form.size }
       if (urls.length > 1) payload.images = urls
       else payload.image = urls[0]
-      const res = await post('/v1/images/edits', payload)
-      const imageId = (res && (res.image_id as string)) || null
-      if (imageId) { jobModelMap.value[imageId] = String(payload.model || '') }
-      const charged = Number((res && (res.price_charged as number)) || 0)
-      if (isFinite(charged) && charged > 0) {
-        lastCharge.value = charged
-        try { const w = await get('/billing/wallet') as { balance: number }; walletBalance.value = typeof w?.balance === 'number' ? w.balance : walletBalance.value } catch {}
+      for (let i = 0; i < n; i++) {
+        const res = await post('/v1/images/edits', payload)
+        const imageId = (res && (res.image_id as string)) || null
+        if (imageId) {
+          jobModelMap.value[imageId] = String(payload.model || '')
+          tasks.value.unshift({ id: imageId, status: 'queued', progress: 0, model: String(payload.model || ''), prompt: form.prompt, isVideo: false })
+        }
+        const charged = Number((res && (res.price_charged as number)) || 0)
+        if (isFinite(charged) && charged > 0) {
+          lastCharge.value = charged
+          try { const w = await get('/billing/wallet') as { balance: number }; walletBalance.value = typeof w?.balance === 'number' ? w.balance : walletBalance.value } catch {}
+        }
+        if (imageId) await pollStatus(imageId)
       }
-      if (imageId) await pollStatus(imageId)
-      else { isGenerating.value = false }
+      
     } else if (form.mode === 'image_to_video') {
       if (!sourceImageText.value) throw new Error('source image required')
       const modelName = form.model || (videoModels.value[0] || 'sora-video-10s')
       const payload: Record<string, unknown> = { model: modelName, prompt: form.prompt, image: sourceImageText.value }
-      const res = await post('/v1/videos', payload)
-      const videoId = (res && (res.video_id as string)) || null
-      if (videoId) { jobModelMap.value[videoId] = modelName }
-      if (videoId) await pollStatus(videoId)
-      else { isGenerating.value = false }
+      for (let i = 0; i < n; i++) {
+        const res = await post('/v1/videos', payload)
+        const videoId = (res && (res.video_id as string)) || null
+        if (videoId) {
+          jobModelMap.value[videoId] = modelName
+          tasks.value.unshift({ id: videoId, status: 'queued', progress: 0, model: modelName, prompt: form.prompt, isVideo: true })
+        }
+        const charged = Number((res && (res.price_charged as number)) || 0)
+        if (isFinite(charged) && charged > 0) {
+          lastCharge.value = charged
+          try { const w = await get('/billing/wallet') as { balance: number }; walletBalance.value = typeof w?.balance === 'number' ? w.balance : walletBalance.value } catch {}
+        }
+        if (videoId) await pollStatus(videoId)
+      }
+      
     } else if (form.mode === 'text_to_video') {
       const modelName = form.model || (videoModels.value[0] || 'sora-video-10s')
       const payload: Record<string, unknown> = { model: modelName, prompt: form.prompt }
-      const res = await post('/v1/videos', payload)
-      const videoId = (res && (res.video_id as string)) || null
-      if (videoId) { jobModelMap.value[videoId] = modelName }
-      if (videoId) await pollStatus(videoId)
-      else { isGenerating.value = false }
+      for (let i = 0; i < n; i++) {
+        const res = await post('/v1/videos', payload)
+        const videoId = (res && (res.video_id as string)) || null
+        if (videoId) {
+          jobModelMap.value[videoId] = modelName
+          tasks.value.unshift({ id: videoId, status: 'queued', progress: 0, model: modelName, prompt: form.prompt, isVideo: true })
+        }
+        const charged = Number((res && (res.price_charged as number)) || 0)
+        if (isFinite(charged) && charged > 0) {
+          lastCharge.value = charged
+          try { const w = await get('/billing/wallet') as { balance: number }; walletBalance.value = typeof w?.balance === 'number' ? w.balance : walletBalance.value } catch {}
+        }
+        if (videoId) await pollStatus(videoId)
+      }
+      
     } else {
       const fd = new FormData()
       fd.append('prompt', form.prompt)
@@ -562,12 +598,15 @@ const generateContent = async () => {
         fd.append('style', form.style || '')
         if (form.seed !== null && !Number.isNaN(form.seed)) fd.append('seed', String(form.seed))
       }
-      const job = await post('/jobs', fd)
-      try {
-        const m = fd.get('model')
-        jobModelMap.value[job.id] = typeof m === 'string' ? m : (form.model || '')
-      } catch {}
-      await pollStatus(job.id)
+      for (let i = 0; i < n; i++) {
+        const job = await post('/jobs', fd)
+        try {
+          const m = fd.get('model')
+          jobModelMap.value[job.id] = typeof m === 'string' ? m : (form.model || '')
+        } catch {}
+        tasks.value.unshift({ id: job.id, status: 'queued', progress: 0, model: (jobModelMap.value[job.id] || form.model || '—'), prompt: form.prompt, isVideo: false })
+        await pollStatus(job.id)
+      }
     }
   } catch (e: unknown) {
     const err = e as { status?: number; data?: { detail?: string; message?: string } }
@@ -580,14 +619,16 @@ const generateContent = async () => {
     if (status === 402) {
       alert(typeof detail === 'string' ? detail : 'Insufficient balance. Cannot generate content.')
     }
-    isGenerating.value = false
+    
   }
 }
 
-const cancelCurrentJob = async () => {
-  const jid = currentJobId.value
+const cancelTask = async (jid: string) => {
   if (!jid) return
-  try { await post(`/jobs/${jid}/cancel`); currentStatus.value = 'canceled' } catch {}
+  try { await post(`/jobs/${jid}/cancel`) } catch {}
+  const idx = tasks.value.findIndex(t => t.id === jid)
+  if (idx > -1) { const t = tasks.value[idx]; if (t) { t.status = 'canceled' } }
+  if (pollTimers[jid]) { clearInterval(pollTimers[jid]); delete pollTimers[jid] }
 }
 
 const resetForm = () => {
