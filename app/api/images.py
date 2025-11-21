@@ -103,22 +103,34 @@ async def edit_image(payload: dict, store: MemoryStore = Depends(get_store), ses
         if not (image.startswith("http://") or image.startswith("https://")):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=api_error("Image URL must be http/https"))
         urls = [image]
-    model_lower = (model or "").lower()
+    def _strip_edit_suffix(name: str) -> str:
+        try:
+            lower = name.lower()
+        except Exception:
+            return name
+        if lower.startswith("qwen"):
+            return name
+        for suffix in ("-edit", "_edit"):
+            if lower.endswith(suffix):
+                return name[: -len(suffix)]
+        return name
+
+    normalized_model = _strip_edit_suffix(model or "")
+    normalized_lower = normalized_model.lower()
     kind = JobKind.TEXT_TO_IMAGE
     extras = {"source_image_urls": urls} if urls and len(urls) > 1 else {"source_image_url": urls[0]}
     params = JobParams(size=size, extras=extras)
 
     provider = "qwen"
     internal_model = "qwen-image-edit"
-    if "sora" in model_lower:
+    if "sora" in normalized_lower:
         provider = "sora"
-        internal_model = model or "sora-image"
-    elif "nano" in model_lower or model_lower == "gemini-3-pro-image-preview":
+        internal_model = normalized_model or "sora-image"
+    elif ("nano" in normalized_lower) or ("gemini-3-pro-image-preview" in normalized_lower):
         provider = "nano-banana-2"
-        internal_model = model or "gemini-3-pro-image-preview"
-    elif "qwen" in model_lower or "edit" in model_lower:
-        provider = "qwen"
-        internal_model = "qwen-image-edit"
+        internal_model = normalized_model or "gemini-3-pro-image-preview"
+    elif "qwen" in normalized_lower or "edit" in normalized_lower:
+        internal_model = normalized_model or "qwen-image-edit"
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=api_error("不支持的图像编辑模型"))
 
