@@ -326,17 +326,61 @@ async def ensure_default_providers(session: AsyncSession) -> None:
                 notes="Text/Image to video (landscape/portrait)",
                 base_url="https://api.sora2.example",
             ),
+            Provider(
+                name="sora",
+                display_name="Sora Image",
+                models=["sora-image", "sora-image-landscape", "sora-image-portrait"],
+                capabilities=["image"],
+                enabled=True,
+                notes="Text & image-to-image (Sora chat completions)",
+                base_url="http://localhost:8000/",
+            ),
+            Provider(
+                name="nano-banana-2",
+                display_name="Nano Banana 2",
+                models=["gemini-3-pro-image-preview"],
+                capabilities=["image"],
+                enabled=True,
+                notes="Chat-based text & image-to-image generation",
+                base_url="https://api.nano-banana-2.example/",
+            ),
         ]
         for p in defaults:
             session.add(p)
         await session.commit()
     else:
         existing = await session.scalars(select(Provider))
-        for p in list(existing):
+        existing_list = list(existing)
+        for p in existing_list:
             if p.name == "qwen":
                 models = p.models or []
                 if "qwen-image-edit" not in models:
                     p.models = models + ["qwen-image-edit"]
+        names = {p.name for p in existing_list}
+        if "sora" not in names:
+            session.add(
+                Provider(
+                    name="sora",
+                    display_name="Sora Image",
+                    models=["sora-image", "sora-image-landscape", "sora-image-portrait"],
+                    capabilities=["image"],
+                    enabled=True,
+                    notes="Text & image-to-image (Sora chat completions)",
+                    base_url="http://localhost:8000/",
+                )
+            )
+        if "nano-banana-2" not in names:
+            session.add(
+                Provider(
+                    name="nano-banana-2",
+                    display_name="Nano Banana 2",
+                    models=["gemini-3-pro-image-preview"],
+                    capabilities=["image"],
+                    enabled=True,
+                    notes="Chat-based text & image-to-image generation",
+                    base_url="https://api.nano-banana-2.example/",
+                )
+            )
         await session.commit()
 
 
