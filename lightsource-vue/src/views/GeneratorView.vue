@@ -160,26 +160,14 @@
           </div>
         </div>
 
-        <div class="tasks-header">
-          <h3>Tasks <span class="count" v-if="tasks.length">{{ tasks.length }}</span></h3>
-          <div class="tasks-list" v-if="tasks.length">
-            <div class="task-item" v-for="t in tasks" :key="t.id">
-              <span class="task-id">{{ t.id }}</span>
-              <span class="task-model">{{ t.model }}</span>
-              <span class="task-status">{{ t.status }}</span>
-              <span class="task-progress">{{ t.progress }}%</span>
-              <button class="pill" @click="cancelTask(t.id)" :disabled="t.status === 'canceled' || t.status === 'failed' || t.status === 'completed'">Cancel</button>
-            </div>
-          </div>
-          <div v-else class="empty-state">No active tasks</div>
-        </div>
+        
 
         <div class="results-header">
-          <h3>Recent Generations <span class="count" v-if="results.length">{{ results.length }}</span></h3>
-          <button class="pill" @click="clearResults">Clear All</button>
+          <h3>Generations & Tasks <span class="count" v-if="results.length">{{ results.length }}</span><span class="count" v-if="tasks.length"> · {{ tasks.length }}</span></h3>
+          <button class="ghost small-btn" @click="clearResults">Clear All</button>
         </div>
 
-        <div v-if="results.length === 0" class="empty-state">
+        <div v-if="(!tasks.length && !results.length)" class="empty-state">
           <svg class="minimal-icon" viewBox="0 0 48 48">
             <rect x="6" y="10" width="36" height="28" rx="4"/>
             <circle cx="16" cy="20" r="3"/>
@@ -188,9 +176,26 @@
           <p>Your generated content will appear here</p>
         </div>
 
-        <div v-else class="results-grid">
-          <div v-for="result in results" :key="result.id" class="result-card">
-            <div :class="['result-image', getAspectClass(result)]">
+          <div v-else class="results-grid">
+            <div v-for="t in tasks" :key="'task:'+t.id" class="result-card task-card">
+              <div class="task-body">
+                <div class="task-left">
+                <span class="task-id">{{ shortId(t.id) }}</span>
+                <span class="task-model truncate">{{ t.model }}</span>
+                <span class="status-pill" :class="'status-' + t.status">{{ t.status }}</span>
+                <span class="task-progress">{{ t.progress }}%</span>
+                <span v-if="t.status === 'processing'" class="dot-loader"></span>
+                </div>
+                <div class="task-actions">
+                  <button class="ghost small-btn" @click="cancelTask(t.id)" :disabled="t.status === 'canceled' || t.status === 'failed' || t.status === 'completed'">Cancel</button>
+                </div>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" :class="'status-' + t.status" :style="{ width: (t.progress || 0) + '%' }"></div>
+              </div>
+            </div>
+            <div v-for="result in results" :key="result.id" class="result-card">
+              <div :class="['result-image', getAspectClass(result)]">
               <video v-if="result.video" :src="result.video" controls playsinline muted></video>
               <img v-else :src="result.image" :alt="result.prompt" @error="handleImageError" />
               <div class="result-overlay">
@@ -344,9 +349,11 @@ const pollStatus = async (jobId: string) => {
       if (s.status === 'completed' || s.status === 'failed' || s.status === 'canceled') {
         if (pollTimers[jobId]) { clearInterval(pollTimers[jobId]); delete pollTimers[jobId] }
         if (s.status === 'completed') { await loadResult(jobId) }
+        try { const idx2 = tasks.value.findIndex(t => t.id === jobId); if (idx2 > -1) tasks.value.splice(idx2, 1) } catch {}
       }
     } catch {
       if (pollTimers[jobId]) { clearInterval(pollTimers[jobId]); delete pollTimers[jobId] }
+      try { const idx2 = tasks.value.findIndex(t => t.id === jobId); if (idx2 > -1) tasks.value.splice(idx2, 1) } catch {}
     }
   }, 1500)
 }
@@ -663,6 +670,7 @@ const deleteResult = (result: GenerationResult) => {
 const clearResults = () => { results.value = [] }
 
 const truncateText = (text: string, maxLength: number) => { return text.length > maxLength ? text.substring(0, maxLength) + '...' : text }
+const shortId = (id: string) => { const s = String(id || ''); return s.length > 6 ? ('…' + s.slice(-6)) : s }
 
 const formatDate = (dateString: string) => { const d = new Date(dateString); const mm = String(d.getMonth()+1).padStart(2,'0'); const dd = String(d.getDate()).padStart(2,'0'); const hh = String(d.getHours()).padStart(2,'0'); const mi = String(d.getMinutes()).padStart(2,'0'); return `${mm}/${dd} ${hh}:${mi}` }
 
@@ -795,12 +803,12 @@ watch(() => form.model, (val) => {
 }
 .balance-bar .insufficient { color: #ff6b6b; font-weight: 600; }
 
-.results-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
+  .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
 
 .workspace-header {
   display: flex;
@@ -1036,8 +1044,8 @@ watch(() => form.model, (val) => {
   font-size: 12px;
   color: var(--muted);
 }
-.meta-left { display: inline-flex; gap: 6px; min-width: 0; align-items: center; }
-.result-model { display: inline-block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meta-left { display: inline-flex; gap: 6px; min-width: 0; align-items: center; flex: 1; }
+.result-model { display: inline-block; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .result-date { white-space: nowrap; }
 .media-tag { margin-left: 8px; background: var(--pill); border: 1px solid var(--border); color: var(--text); padding: 2px 8px; border-radius: 999px; font-size: 11px; }
 
@@ -1108,4 +1116,23 @@ watch(() => form.model, (val) => {
 }
 
 .results-header .count { margin-left: 8px; font-size: 12px; color: var(--muted); }
+.small-btn { padding: 6px 10px; font-size: 12px; }
+.task-card { display: flex; align-items: center; }
+.task-body { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 10px 12px; }
+.task-left { display: grid; grid-template-columns: minmax(52px, auto) minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; min-width: 0; }
+.task-id { font-weight: 600; }
+.truncate { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.task-actions { display: inline-flex; gap: 8px; white-space: nowrap; flex-shrink: 0; }
+.task-progress { font-weight: 600; min-width: 42px; text-align: right; }
+.progress-bar { height: 6px; background: var(--panel-soft); border-top: 1px solid var(--border); }
+.progress-fill { height: 6px; background: var(--accent); transition: width 0.2s ease; }
+.status-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; border: 1px solid var(--border); color: var(--text); background: var(--pill); }
+.progress-fill.status-completed { background: #16a34a; }
+.progress-fill.status-failed { background: #ef4444; }
+.progress-fill.status-canceled { background: #eab308; }
+.status-pill.status-completed { background: #16a34a; color: #fff; border-color: #16a34a; }
+.status-pill.status-failed { background: #ef4444; color: #fff; border-color: #ef4444; }
+.status-pill.status-canceled { background: #eab308; color: #000; border-color: #eab308; }
+.status-pill.status-processing { background: var(--pill); }
+.dot-loader { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--muted); border-top-color: var(--accent); animation: spin 1s linear infinite; }
 </style>

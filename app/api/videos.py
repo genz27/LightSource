@@ -4,6 +4,7 @@ import datetime as dt
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Header
+from app.deps.auth import get_current_user_optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
@@ -53,6 +54,7 @@ async def create_video(
     store: MemoryStore = Depends(get_store),
     session: AsyncSession = Depends(get_session),
     x_api_key: str | None = Header(None),
+    current_user = Depends(get_current_user_optional),
 ) -> dict:
     from app.config import get_settings
     settings = get_settings()
@@ -86,7 +88,7 @@ async def create_video(
             is_public=True,
             params=params,
             source_image_name=None,
-            owner_id=None,
+            owner_id=(current_user.id if current_user else None),
         ),
         job_id=new_job_id,
     )
@@ -94,6 +96,27 @@ async def create_video(
 
     tq = get_task_queue()
     await tq.enqueue(job.id)
+
+    # Deduct balance if user present and price > 0
+    charged = 0.0
+    try:
+        if current_user:
+            from app.schemas import TransactionType
+            prices = store.get_prices()
+            key = "image_to_video" if image else "text_to_video"
+            price = float(prices.get(key, 0.0))
+            if price > 0:
+                from app.services.persistence import get_wallet_by_user_id, change_balance
+                wallet = await get_wallet_by_user_id(session, current_user.id)
+                if wallet.balance < price:
+                    raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=_error("Insufficient balance"))
+                await change_balance(session, user_id=current_user.id, delta=-price, tx_type=TransactionType.DEDUCT, ref_job_id=job.id, description=key)
+                charged = price
+    except HTTPException:
+        # bubble up for 402
+        raise
+    except Exception:
+        pass
 
     now = dt.datetime.utcnow().isoformat() + "Z"
     return {
@@ -107,6 +130,7 @@ async def create_video(
         "result_url": None,
         "video_url": None,
         "error_message": None,
+        "price_charged": charged,
         "created_at": now,
         "updated_at": now,
     }
