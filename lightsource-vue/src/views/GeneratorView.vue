@@ -401,6 +401,9 @@ const pushResult = (jobId: string, url: string, isVideo: boolean) => {
     results.value.splice(existingIndex, 1)
   }
   results.value.unshift(base)
+  if (results.value.length > 3) {
+    results.value = results.value.slice(0, 3)
+  }
   try { delete jobModelMap.value[jobId] } catch {}
 }
 
@@ -733,18 +736,6 @@ const getAspectClass = (result: GenerationResult) => {
   return 'aspect-square'
 }
 
-const loadRecentResults = async () => {
-  try {
-    const resp = await listAssetsApi({ limit: 12 }) as { items?: AssetDTO[] }
-    const items = Array.isArray(resp?.items) ? resp.items : []
-    const mapped = items
-      .filter(a => a.type === 'image' || a.type === 'video')
-      .map(mapAssetToResult)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    results.value = mapped
-  } catch {}
-}
-
 const hydrateActiveTasks = async () => {
   try {
     const active = await get('/jobs/active?limit=20') as { id: string; status: string; progress: number }[]
@@ -783,7 +774,6 @@ onMounted(async () => {
   try { const w = await get('/billing/wallet') as { balance: number }; walletBalance.value = typeof w?.balance === 'number' ? w.balance : null } catch {}
   try { const p = await get('/billing/prices') as Record<string, number>; if (p && typeof p === 'object') prices.value = p } catch {}
   form.model = availableModels.value[0] || 'qwen-image'
-  await loadRecentResults()
   await hydrateActiveTasks()
   try {
     const url = sessionStorage.getItem('generator_source_url') || ''
@@ -1070,7 +1060,8 @@ watch(() => form.model, (val) => {
 .result-image video {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: #000;
 }
 
 .result-overlay {
