@@ -2,15 +2,71 @@
   <AppLayout>
     <!-- Hero Section -->
     <section class="hero">
-      <div class="hero-content">
-        <h1>LightSource</h1>
-        <p>AI-powered creative tools for the next generation of digital artists and developers.</p>
-        <div class="hero-actions">
-          <RouterLink to="/auth" class="pill accent">Get Started</RouterLink>
-        </div>
-      </div>
       <div class="hero-background">
-        <img src="https://trae-api-sg.mchost.guru/api/ide/v1/text_to_image?prompt=minimalist%20abstract%20geometric%20background%20with%20soft%20gradient%20shapes%2C%20clean%20and%20modern%20design%2C%20subtle%20lighting%2C%20professional%20quality&image_size=landscape_16_9" alt="Background" />
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+      </div>
+      <div class="hero-inner">
+        <div class="hero-content">
+          <div class="eyebrow">Create boldly with AI</div>
+          <h1>LightSource</h1>
+          <p>AI-powered creative tools for the next generation of digital artists and developers.</p>
+          <div class="hero-actions">
+            <RouterLink to="/auth" class="pill accent">Start for free</RouterLink>
+            <RouterLink to="/generator" class="ghost">Launch Studio</RouterLink>
+          </div>
+          <div class="hero-stats">
+            <div class="stat">
+              <span class="stat-value">10k+</span>
+              <span class="stat-label">Projects launched</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value">98%</span>
+              <span class="stat-label">Customer satisfaction</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value">Instant</span>
+              <span class="stat-label">Preview results</span>
+            </div>
+          </div>
+        </div>
+        <div class="hero-panel">
+          <div class="panel-header">
+            <span class="pill soft">Live demo</span>
+            <span class="muted">Generate in seconds</span>
+          </div>
+          <div class="panel-body">
+            <div class="panel-preview">
+              <div class="preview-badge">Video</div>
+              <video
+                src="https://trae-api-sg.mchost.guru/api/ide/v1/text_to_video?prompt=floating%20glass%20orbs%20over%20a%20neon%20grid%20landscape%20at%20dusk%2C%20cinematic%20lighting%2C%20slow%20pan&image_size=landscape_16_9"
+                autoplay
+                loop
+                muted
+                playsinline
+              ></video>
+              <div class="preview-overlay">
+                <p>“Cinematic dreamscape in neon.”</p>
+                <span>Render time · 9s</span>
+              </div>
+            </div>
+            <div class="panel-meta">
+              <div class="meta-row">
+                <span class="label">Mode</span>
+                <span class="value">Text → Video</span>
+              </div>
+              <div class="meta-row">
+                <span class="label">Model</span>
+                <span class="value">Sora</span>
+              </div>
+              <div class="meta-row">
+                <span class="label">Quality</span>
+                <span class="value">4K ready</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -55,56 +111,53 @@
     <!-- Gallery Section -->
     <section class="gallery">
       <div class="gallery-header">
-        <h2>Recent Creations</h2>
-        <p>Discover what our community is creating with LightSource</p>
-      </div>
-      <div class="gallery-grid">
-        <div class="gallery-item wide">
-          <img loading="lazy" decoding="async" fetchpriority="low" src="https://trae-api-sg.mchost.guru/api/ide/v1/text_to_image?prompt=stunning%20landscape%20photography%20of%20mountains%20at%20sunset%20with%20vibrant%20colors%2C%20professional%20quality&image_size=landscape_16_9" alt="Mountain Landscape" />
-          <div class="gallery-overlay">
-            <h4>Mountain Vista</h4>
-            <p>Generated in 2.1s</p>
-          </div>
+        <div>
+          <p class="eyebrow">Recent Creations</p>
+          <h2>Fresh from the studio</h2>
+          <p>Showcasing text-to-image and image-to-image results from Sora Image & Nano Banana 2.</p>
         </div>
-        <div class="gallery-item tall">
-          <img loading="lazy" decoding="async" fetchpriority="low" src="https://trae-api-sg.mchost.guru/api/ide/v1/text_to_image?prompt=beautiful%20portrait%20of%20a%20person%20with%20soft%20lighting%2C%20professional%20photography%20style&image_size=portrait_4_3" alt="Portrait" />
-          <div class="gallery-overlay">
-            <h4>Portrait Study</h4>
-            <p>Generated in 3.2s</p>
-          </div>
-        </div>
-        <div class="gallery-item">
-          <img loading="lazy" decoding="async" fetchpriority="low" src="https://trae-api-sg.mchost.guru/api/ide/v1/text_to_image?prompt=futuristic%20cityscape%20with%20neon%20lights%20and%20flying%20cars%2C%20cyberpunk%20aesthetic&image_size=square" alt="Futuristic City" />
-          <div class="gallery-overlay">
-            <h4>Future City</h4>
-            <p>Generated in 2.5s</p>
-          </div>
-        </div>
-        <div class="gallery-item">
-          <img loading="lazy" decoding="async" fetchpriority="low" src="https://trae-api-sg.mchost.guru/api/ide/v1/text_to_image?prompt=modern%20abstract%20art%20with%20bold%20colors%20and%20geometric%20shapes%2C%20contemporary%20style&image_size=square" alt="Abstract Art" />
-          <div class="gallery-overlay">
-            <h4>Abstract Dreams</h4>
-            <p>Generated in 1.8s</p>
-          </div>
-        </div>
-        <div class="gallery-item">
-          <img loading="lazy" decoding="async" fetchpriority="low" src="https://trae-api-sg.mchost.guru/api/ide/v1/text_to_image?prompt=underwater%20scene%20with%20colorful%20coral%20reef%20and%20tropical%20fish%2C%20vibrant%20ocean%20life&image_size=square" alt="Underwater Scene" />
-          <div class="gallery-overlay">
-            <h4>Ocean Depths</h4>
-            <p>Generated in 2.7s</p>
-          </div>
-        </div>
-        <div class="gallery-item full">
-          <img loading="lazy" decoding="async" fetchpriority="low" src="https://trae-api-sg.mchost.guru/api/ide/v1/text_to_image?prompt=space%20exploration%20scene%20with%20planets%20and%20stars%2C%20cosmic%20background%2C%20science%20fiction&image_size=landscape_16_9" alt="Space Scene" />
-          <div class="gallery-overlay">
-            <h4>Cosmic Journey</h4>
-            <p>Generated in 2.9s</p>
-          </div>
+        <div class="gallery-actions">
+          <RouterLink to="/generator" class="pill accent">Start Creating</RouterLink>
+          <button class="ghost">View More</button>
         </div>
       </div>
-      <div class="gallery-actions">
-        <RouterLink to="/generator" class="pill accent">Start Creating</RouterLink>
-        <button class="ghost">View More</button>
+      <div class="gallery-rail">
+        <article v-for="creation in recentCreations" :key="creation.title" class="creation-card" :class="creation.aspect">
+          <div class="creation-media">
+            <img :src="creation.url" :alt="creation.title" loading="lazy" decoding="async" fetchpriority="low" />
+            <div class="creation-gradient"></div>
+            <div class="creation-badges">
+              <span class="pill soft">{{ creation.provider }}</span>
+              <span class="pill ghost-pill">{{ creation.mode }}</span>
+            </div>
+          </div>
+          <div class="creation-body">
+            <div class="creation-top">
+              <div>
+                <p class="creation-kicker">{{ creation.duration }}</p>
+                <h4>{{ creation.title }}</h4>
+                <p class="creation-desc">{{ creation.description }}</p>
+              </div>
+              <div class="tag-stack">
+                <span v-for="tag in creation.tags" :key="tag" class="pill tag">{{ tag }}</span>
+              </div>
+            </div>
+            <div class="creation-meta">
+              <div>
+                <p class="muted">Model</p>
+                <span>{{ creation.model }}</span>
+              </div>
+              <div>
+                <p class="muted">Output</p>
+                <span>{{ creation.output }}</span>
+              </div>
+              <div>
+                <p class="muted">Remix</p>
+                <span>{{ creation.remix }}</span>
+              </div>
+            </div>
+          </div>
+        </article>
       </div>
     </section>
 
@@ -204,6 +257,60 @@ import { ref } from 'vue'
 
 const showDemo = ref(false)
 const isPlayingDemo = ref(false)
+const recentCreations = [
+  {
+    title: 'Glass Bloom',
+    description: 'Studio portrait remixed from a selfie with painterly glazing.',
+    url: 'https://trae-api-sg.mchost.guru/api/ide/v1/text_to_image?prompt=ethereal%20portrait%20of%20a%20woman%20with%20glass%20petals%20and%20soft%20light%2C%20fine%20art%20photography&image_size=portrait_4_3',
+    mode: 'Image → Image',
+    provider: 'Sora Image',
+    model: 'sora-image-portrait',
+    output: '360×540 portrait',
+    remix: 'Brushwork + color lift',
+    duration: 'Finished in 3.2s',
+    tags: ['Remix ready', 'Portrait'],
+    aspect: 'portrait',
+  },
+  {
+    title: 'Circuit Bazaar',
+    description: 'Cyberpunk market scene created from text prompt only.',
+    url: 'https://trae-api-sg.mchost.guru/api/ide/v1/text_to_image?prompt=cyberpunk%20street%20market%20glowing%20with%20neon%20lights%20and%20dense%20fog%2C%20cinematic%20frame&image_size=landscape_16_9',
+    mode: 'Text → Image',
+    provider: 'Nano Banana 2',
+    model: 'gemini-3-pro-image-preview',
+    output: '540×360 landscape',
+    remix: 'Depth boost',
+    duration: 'Finished in 2.4s',
+    tags: ['Text prompt', 'Cinematic'],
+    aspect: 'landscape',
+  },
+  {
+    title: 'Sculpted Aura',
+    description: 'Marble bust restyled into luminous jade via image upload.',
+    url: 'https://trae-api-sg.mchost.guru/api/ide/v1/text_to_image?prompt=ancient%20marble%20bust%20reimagined%20in%20jade%20with%20glowing%20veins%2C%20studio%20lighting&image_size=square',
+    mode: 'Image → Image',
+    provider: 'Nano Banana 2',
+    model: 'gemini-3-pro-image-preview',
+    output: '360×360 square',
+    remix: 'Material shift',
+    duration: 'Finished in 2.9s',
+    tags: ['Img2Img', 'Material'],
+    aspect: 'square',
+  },
+  {
+    title: 'Aurora Drift',
+    description: 'Atmospheric valley graded with teal-magenta film tones.',
+    url: 'https://trae-api-sg.mchost.guru/api/ide/v1/text_to_image?prompt=vast%20valley%20with%20river%20and%20aurora%20sky%2C%20film%20grading%20teal%20and%20magenta%2C%20wide%20angle&image_size=landscape_16_9',
+    mode: 'Text → Image',
+    provider: 'Sora Image',
+    model: 'sora-image-landscape',
+    output: '540×360 landscape',
+    remix: 'Film grade',
+    duration: 'Finished in 2.1s',
+    tags: ['Landscape', 'Fast render'],
+    aspect: 'landscape',
+  },
+]
 
 const playDemo = () => {
   showDemo.value = !showDemo.value
@@ -214,123 +321,226 @@ const playDemo = () => {
 <style scoped>
 .hero {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 40vh;
-  padding: var(--space-8, 64px) 0;
-  text-align: center;
   overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(167, 139, 250, 0.08));
+  padding: clamp(32px, 6vw, 80px);
+  margin-bottom: 48px;
+}
+
+.hero-inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 32px;
+  align-items: center;
+  z-index: 1;
+}
+
+.hero-background {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  filter: blur(20px);
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  opacity: 0.6;
+  animation: float 12s ease-in-out infinite;
+}
+
+.orb-1 {
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.45), transparent 60%);
+  top: -80px;
+  left: -120px;
+}
+
+.orb-2 {
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.38), transparent 55%);
+  bottom: -40px;
+  right: -120px;
+  animation-delay: -4s;
+}
+
+.orb-3 {
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.3), transparent 55%);
+  top: 30%;
+  right: 30%;
+  animation-delay: -2s;
 }
 
 .hero-content {
   position: relative;
-  z-index: 2;
-  max-width: 800px;
-  margin: 0 auto;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  text-align: left;
+}
+
+.eyebrow {
+  align-self: flex-start;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--accent);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 12px;
 }
 
 .hero-content h1 {
-  font-size: 72px;
+  font-size: clamp(48px, 8vw, 82px);
   font-weight: 800;
-  line-height: 1.1;
-  margin-bottom: 32px;
-  background: linear-gradient(135deg, var(--accent) 0%, #ffffff 100%);
+  line-height: 1.05;
+  margin: 0;
+  background: linear-gradient(135deg, #fff 0%, var(--accent) 40%, #a855f7 80%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .hero-content p {
-  font-size: 24px;
+  font-size: 20px;
   line-height: 1.6;
   color: var(--muted);
-  margin-bottom: 48px;
+  margin: 0;
 }
 
 .hero-actions {
   display: flex;
-  justify-content: center;
-  gap: 24px;
+  gap: 16px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
-.hero-background {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-  opacity: 0.3;
-}
-
-.hero-background img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: blur(2px);
-}
-
-.hero-visual {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.media-showcase {
+.hero-stats {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  max-width: 480px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-top: 8px;
 }
 
-.media-item {
-  aspect-ratio: 1;
+.stat {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px 14px;
+  backdrop-filter: blur(10px);
+}
+
+.stat-value {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.hero-panel {
+  position: relative;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.35);
+  backdrop-filter: blur(16px);
+  min-height: 360px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.panel-body {
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.panel-preview {
+  position: relative;
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid var(--border);
-  animation: fadeInUp 0.6s ease-out var(--delay) both;
-  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: radial-gradient(circle at 30% 30%, rgba(59, 130, 246, 0.12), transparent 55%), rgba(255, 255, 255, 0.02);
 }
 
-.media-item.large {
-  grid-column: span 2;
-  grid-row: span 2;
-  aspect-ratio: 16/9;
-}
-
-.media-item img {
+.panel-preview video {
   width: 100%;
   height: 100%;
+  max-height: 280px;
   object-fit: cover;
+  display: block;
 }
 
-.media-overlay {
+.preview-badge {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 12px;
+  left: 12px;
+  padding: 6px 10px;
+  background: rgba(59, 130, 246, 0.22);
+  color: #fff;
+  border-radius: 10px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.preview-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.6));
+  color: #fff;
+}
+
+.panel-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.meta-row {
   display: flex;
-  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #e2e8f0;
 }
 
-.media-type {
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
+.meta-row .label {
+  color: rgba(226, 232, 240, 0.7);
+  font-size: 13px;
 }
 
-.media-time {
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
+.meta-row .value {
+  font-weight: 600;
+  font-size: 14px;
 }
 
 /* Demo Section */
@@ -412,104 +622,166 @@ const playDemo = () => {
 /* Gallery Section */
 .gallery {
   margin-top: 120px;
+  padding: 64px clamp(20px, 4vw, 32px);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(59, 130, 246, 0.08), rgba(236, 72, 153, 0.08), rgba(52, 211, 153, 0.06));
+  position: relative;
+  overflow: hidden;
 }
 
 .gallery-header {
-  text-align: center;
-  margin-bottom: 64px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 32px;
 }
 
 .gallery-header h2 {
-  font-size: 48px;
-  margin-bottom: 16px;
+  font-size: clamp(32px, 5vw, 44px);
+  margin: 6px 0;
   color: var(--text);
 }
 
 .gallery-header p {
-  font-size: 20px;
+  font-size: 16px;
   color: var(--muted);
 }
 
-.gallery-grid {
+.gallery-rail {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 20px;
-  margin-bottom: 48px;
-  grid-auto-flow: dense;
 }
 
-.gallery-item {
+.creation-card {
   position: relative;
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
-  border: 1px solid var(--border);
-  transition: all 0.3s ease;
-  cursor: pointer;
-  content-visibility: auto;
-  will-change: transform;
-  aspect-ratio: 1 / 1;
-  background: var(--panel-soft);
-  box-shadow: var(--shadow);
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  display: grid;
+  grid-template-rows: auto 1fr;
 }
 
-.gallery-item:hover {
-  transform: translateY(-4px);
-  border-color: var(--accent);
-  box-shadow: 0 10px 24px rgba(0,0,0,.35);
+.creation-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
 }
 
-.gallery-item.wide {
-  grid-column: span 2;
-  aspect-ratio: 16 / 9;
+.creation-card.landscape .creation-media img {
+  aspect-ratio: 3 / 2;
 }
 
-.gallery-item.tall {
+.creation-card.portrait .creation-media img {
   aspect-ratio: 3 / 4;
 }
 
-.gallery-item.full {
-  grid-column: 1 / -1;
-  aspect-ratio: 16 / 9;
+.creation-card.square .creation-media img {
+  aspect-ratio: 1 / 1;
 }
 
-.gallery-item img {
+.creation-media {
+  position: relative;
+}
+
+.creation-media img {
   width: 100%;
-  height: 100%;
+  height: auto;
+  display: block;
   object-fit: cover;
-  object-position: center;
 }
 
-.gallery-overlay {
+.creation-gradient {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
-  color: white;
-  padding: 24px;
-  transform: translateY(100%);
-  transition: transform 0.3s ease;
-  will-change: transform;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 20%, rgba(0, 0, 0, 0.55) 100%);
+  pointer-events: none;
 }
 
-.gallery-item:hover .gallery-overlay {
-  transform: translateY(0);
+.creation-badges {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.gallery-overlay h4 {
-  font-size: 18px;
-  margin-bottom: 4px;
+.ghost-pill {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.gallery-overlay p {
+.creation-body {
+  padding: 18px 18px 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.creation-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.creation-kicker {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.creation-desc {
+  margin: 6px 0 0;
+  color: var(--muted);
   font-size: 14px;
-  opacity: 0.9;
+}
+
+.tag-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.pill.tag {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  padding: 6px 10px;
+}
+
+.creation-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.creation-meta div {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.creation-meta span {
+  color: #e2e8f0;
+  font-weight: 600;
 }
 
 .gallery-actions {
   display: flex;
-  justify-content: center;
-  gap: 24px;
+  align-items: center;
+  gap: 12px;
 }
 
 /* Features Section */
@@ -618,19 +890,25 @@ const playDemo = () => {
   }
 }
 
+@keyframes float {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0); }
+}
+
 /* Desktop (1200px and up) */
 @media (min-width: 1200px) {
   .hero {
-    padding: var(--space-8, 64px) 0;
-    min-height: 50vh;
+    padding: 80px;
+    min-height: 55vh;
   }
-  
+
   .hero-content h1 {
-    font-size: 84px;
+    font-size: 88px;
   }
-  
+
   .hero-content p {
-    font-size: 28px;
+    font-size: 26px;
   }
   
   .features {
@@ -641,16 +919,16 @@ const playDemo = () => {
 /* Tablet (768px to 1199px) */
 @media (min-width: 768px) and (max-width: 1199px) {
   .hero {
-    padding: var(--space-6, 48px) 0;
-    min-height: 40vh;
+    padding: 56px;
+    min-height: 45vh;
   }
-  
+
   .hero-content h1 {
     font-size: 64px;
   }
-  
+
   .hero-content p {
-    font-size: 22px;
+    font-size: 20px;
   }
   
   .demo-section {
@@ -669,24 +947,13 @@ const playDemo = () => {
   .gallery {
     margin-top: 100px;
   }
-  
+
   .gallery-header {
-    margin-bottom: 48px;
+    margin-bottom: 36px;
   }
-  
+
   .gallery-header h2 {
     font-size: 40px;
-  }
-  
-  .gallery-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
-    margin-bottom: 40px;
-    grid-auto-flow: dense;
-  }
-  
-  .gallery-item.wide {
-    grid-column: span 2;
   }
   
   .features {
@@ -719,10 +986,19 @@ const playDemo = () => {
 /* Mobile (767px and below) */
 @media (max-width: 767px) {
   .hero {
-    padding: var(--space-4, 32px) 0;
-    min-height: 30vh;
+    padding: var(--space-4, 32px);
+    min-height: 40vh;
   }
-  
+
+  .hero-inner {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-content {
+    text-align: center;
+    align-items: center;
+  }
+
   .hero-content h1 {
     font-size: 48px;
   }
@@ -762,7 +1038,7 @@ const playDemo = () => {
   .gallery {
     margin-top: 60px;
   }
-  
+
   .gallery-header {
     margin-bottom: 32px;
   }
@@ -774,22 +1050,11 @@ const playDemo = () => {
   .gallery-header p {
     font-size: 16px;
   }
-  
-  .gallery-grid {
+
+  .gallery-rail {
     grid-template-columns: 1fr;
-    grid-auto-rows: 200px;
-    gap: 16px;
-    margin-bottom: 32px;
   }
-  
-  .gallery-item.wide {
-    grid-column: span 1;
-  }
-  
-  .gallery-item.tall {
-    grid-row: span 1;
-  }
-  
+
   .gallery-actions {
     flex-direction: column;
     gap: 16px;

@@ -549,11 +549,15 @@ async def cancel_job(
 def _infer_provider(model: str | None) -> str | None:
     if not model:
         return None
-    if "qwen" in model:
-        return "qwen"
-    if "sora" in model:
-        return "sora2"
     m = model.lower()
+    if "sora-image" in m:
+        return "sora"
+    if "sora" in m:
+        return "sora2"
+    if "nano" in m or "gemini-3-pro-image-preview" in m:
+        return "nano-banana-2"
+    if "qwen" in m:
+        return "qwen"
     if "flux" in m or "musepublic" in m:
         return "flux"
     if "majicflus" in m or "mailand" in m:
@@ -565,7 +569,16 @@ def _validate_model_kind(kind: JobKind, model: str | None) -> None:
     if model is None:
         return
     pairs = {
-        JobKind.TEXT_TO_IMAGE: {"qwen-image", "qwen-image-edit", "MusePublic/489_ckpt_FLUX_1", "MAILAND/majicflus_v1"},
+        JobKind.TEXT_TO_IMAGE: {
+            "qwen-image",
+            "qwen-image-edit",
+            "MusePublic/489_ckpt_FLUX_1",
+            "MAILAND/majicflus_v1",
+            "sora-image",
+            "sora-image-landscape",
+            "sora-image-portrait",
+            "gemini-3-pro-image-preview",
+        },
         JobKind.TEXT_TO_VIDEO: {"sora2-video"},
         JobKind.IMAGE_TO_VIDEO: {"sora2-video"},
     }
