@@ -123,8 +123,6 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   height: 100%;
-  max-width: var(--container-width, 1200px);
-  margin: 0 auto;
   width: 100%;
 }
 
