@@ -238,6 +238,7 @@
 import AppLayout from '@/components/AppLayout.vue'
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { get, post } from '@/api/client'
+import { listAssets as listAssetsApi } from '@/api/assets'
 
 interface GenerationResult {
   id: string
@@ -339,13 +340,18 @@ const handleImageError = (event: Event) => {
 
 //
 
+const normalizeStatus = (status: string) => {
+  if (status === 'running') return 'processing'
+  return status
+}
+
 const pollStatus = async (jobId: string) => {
   if (pollTimers[jobId]) { clearInterval(pollTimers[jobId]); delete pollTimers[jobId] }
   pollTimers[jobId] = window.setInterval(async () => {
     try {
       const s = await get(`/jobs/${jobId}/status`)
       const idx = tasks.value.findIndex(t => t.id === jobId)
-      if (idx > -1) { const t = tasks.value[idx]; if (t) { t.status = s.status; t.progress = s.progress } }
+      if (idx > -1) { const t = tasks.value[idx]; if (t) { t.status = normalizeStatus(s.status); t.progress = s.progress } }
       if (s.status === 'completed' || s.status === 'failed' || s.status === 'canceled') {
         if (pollTimers[jobId]) { clearInterval(pollTimers[jobId]); delete pollTimers[jobId] }
         if (s.status === 'completed') { await loadResult(jobId) }
@@ -390,8 +396,45 @@ const pushResult = (jobId: string, url: string, isVideo: boolean) => {
       if (orient) base.orientation = orient as 'landscape' | 'portrait'
     } catch {}
   } else { base.image = url }
+  const existingIndex = results.value.findIndex(r => r.id === base.id)
+  if (existingIndex > -1) {
+    results.value.splice(existingIndex, 1)
+  }
   results.value.unshift(base)
   try { delete jobModelMap.value[jobId] } catch {}
+}
+
+type AssetDTO = { id: string; type: 'image' | 'video' | 'audio'; url: string; preview_url?: string | null; meta?: Record<string, any> | null; created_at: string }
+
+const mapAssetToResult = (asset: AssetDTO): GenerationResult => {
+  const meta = (asset.meta || {}) as Record<string, any>
+  const providerResp = (meta.provider_response || {}) as Record<string, any>
+  const request = (providerResp.request || {}) as Record<string, any>
+  const rawInput = ((providerResp.raw || {}).input || {}) as Record<string, any>
+  const size = typeof meta.size === 'string'
+    ? meta.size
+    : (request.size as string) || ((rawInput.width && rawInput.height) ? `${rawInput.width}x${rawInput.height}` : '')
+  const model = (meta.model as string) || (providerResp.model as string) || '—'
+  const prompt = (request.prompt as string) || (meta.prompt as string) || ''
+  const orientation = (meta.orientation as GenerationResult['orientation']) || (request.orientation as GenerationResult['orientation']) || (rawInput.orientation as GenerationResult['orientation'])
+  const seed = (meta.seed ?? rawInput.seed) as number | null | undefined
+  const style = (meta.style as string) || ''
+  const base: GenerationResult = {
+    id: asset.id,
+    prompt,
+    model,
+    size: size || '1024x1024',
+    seed: typeof seed === 'number' ? seed : null,
+    style,
+    createdAt: asset.created_at,
+    orientation: orientation || undefined
+  }
+  if (asset.type === 'video') {
+    base.video = asset.url
+  } else {
+    base.image = asset.preview_url || asset.url
+  }
+  return base
 }
 
 const onSelectSourceImages = (e: Event) => {
@@ -690,11 +733,58 @@ const getAspectClass = (result: GenerationResult) => {
   return 'aspect-square'
 }
 
+const loadRecentResults = async () => {
+  try {
+    const resp = await listAssetsApi({ limit: 12 }) as { items?: AssetDTO[] }
+    const items = Array.isArray(resp?.items) ? resp.items : []
+    const mapped = items
+      .filter(a => a.type === 'image' || a.type === 'video')
+      .map(mapAssetToResult)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    results.value = mapped
+  } catch {}
+}
+
+const hydrateActiveTasks = async () => {
+  try {
+    const active = await get('/jobs/active?limit=20') as { id: string; status: string; progress: number }[]
+    const withDetails = await Promise.all(active.map(async job => {
+      try {
+        const detail = await get(`/jobs/${job.id}`) as { model?: string | null; prompt?: string | null; params?: Record<string, any> | null }
+        const model = detail?.model || '—'
+        const prompt = detail?.prompt || ''
+        jobModelMap.value[job.id] = model
+        return {
+          id: job.id,
+          status: normalizeStatus(job.status),
+          progress: job.progress,
+          model,
+          prompt,
+          isVideo: false
+        } as GenTask
+      } catch {
+        return {
+          id: job.id,
+          status: normalizeStatus(job.status),
+          progress: job.progress,
+          model: '—',
+          prompt: '',
+          isVideo: false
+        } as GenTask
+      }
+    }))
+    tasks.value = withDetails
+    withDetails.forEach(t => pollStatus(t.id))
+  } catch {}
+}
+
 onMounted(async () => {
   try { providers.value = await get('/providers') } catch {}
   try { const w = await get('/billing/wallet') as { balance: number }; walletBalance.value = typeof w?.balance === 'number' ? w.balance : null } catch {}
   try { const p = await get('/billing/prices') as Record<string, number>; if (p && typeof p === 'object') prices.value = p } catch {}
   form.model = availableModels.value[0] || 'qwen-image'
+  await loadRecentResults()
+  await hydrateActiveTasks()
   try {
     const url = sessionStorage.getItem('generator_source_url') || ''
     const type = sessionStorage.getItem('generator_source_type') || 'image'
