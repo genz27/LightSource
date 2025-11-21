@@ -36,6 +36,10 @@ def _build_content(prompt: str, image_url: str | None) -> List[Dict[str, Any]] |
     return prompt
 
 
+def _clean_url(url_val: str) -> str:
+    return url_val.rstrip(")].>,\"'")
+
+
 def _extract_url_from_parts(parts: Iterable[Any]) -> str | None:
     for part in parts:
         if not isinstance(part, dict):
@@ -45,15 +49,15 @@ def _extract_url_from_parts(parts: Iterable[Any]) -> str | None:
             if isinstance(image_entry, dict):
                 url_val = image_entry.get("url")
                 if isinstance(url_val, str):
-                    return url_val
+                    return _clean_url(url_val)
             if isinstance(image_entry, str):
-                return image_entry
+                return _clean_url(image_entry)
         if part.get("type") == "text":
             text = part.get("text")
             if isinstance(text, str):
                 match = re.search(r"https?://\S+", text)
                 if match:
-                    return match.group(0)
+                    return _clean_url(match.group(0))
     return None
 
 
@@ -63,12 +67,12 @@ def _extract_image_url(message: dict[str, Any]) -> str:
     if isinstance(content, list):
         url_val = _extract_url_from_parts(content)
         if url_val:
-            return url_val
+            return _clean_url(url_val)
     # Legacy single string content
     if isinstance(content, str):
         match = re.search(r"https?://\S+", content)
         if match:
-            return match.group(0)
+            return _clean_url(match.group(0))
     raise RuntimeError("provider returned no image URL in message content")
 
 
@@ -89,7 +93,7 @@ def _extract_from_stream(resp: requests.Response) -> Tuple[str | None, list[dict
         except Exception:
             match = re.search(r"https?://\S+", payload)
             if match:
-                last_url = match.group(0)
+                last_url = _clean_url(match.group(0))
             continue
         if isinstance(obj, dict):
             chunks.append(obj)
@@ -106,7 +110,7 @@ def _extract_from_stream(resp: requests.Response) -> Tuple[str | None, list[dict
             if isinstance(content, str):
                 match = re.search(r"https?://\S+", content)
                 if match:
-                    last_url = match.group(0)
+                    last_url = _clean_url(match.group(0))
                     break
     return last_url, chunks
 
