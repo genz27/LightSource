@@ -301,7 +301,9 @@ const availableModels = computed<string[]>(() => {
   }
   if (form.mode === 'image_to_image') {
     const edits = unique.filter(m => m.includes('edit'))
-    return edits.length ? edits : ['qwen-image-edit']
+    const others = unique.filter(m => !m.includes('edit'))
+    if (edits.length || others.length) return [...edits, ...others]
+    return ['qwen-image-edit']
   }
   return unique.length ? unique : ['sora2-video']
 })
@@ -339,13 +341,18 @@ const handleImageError = (event: Event) => {
 
 //
 
+const normalizeStatus = (status: string) => {
+  if (status === 'running') return 'processing'
+  return status
+}
+
 const pollStatus = async (jobId: string) => {
   if (pollTimers[jobId]) { clearInterval(pollTimers[jobId]); delete pollTimers[jobId] }
   pollTimers[jobId] = window.setInterval(async () => {
     try {
       const s = await get(`/jobs/${jobId}/status`)
       const idx = tasks.value.findIndex(t => t.id === jobId)
-      if (idx > -1) { const t = tasks.value[idx]; if (t) { t.status = s.status; t.progress = s.progress } }
+      if (idx > -1) { const t = tasks.value[idx]; if (t) { t.status = normalizeStatus(s.status); t.progress = s.progress } }
       if (s.status === 'completed' || s.status === 'failed' || s.status === 'canceled') {
         if (pollTimers[jobId]) { clearInterval(pollTimers[jobId]); delete pollTimers[jobId] }
         if (s.status === 'completed') { await loadResult(jobId) }
@@ -390,7 +397,14 @@ const pushResult = (jobId: string, url: string, isVideo: boolean) => {
       if (orient) base.orientation = orient as 'landscape' | 'portrait'
     } catch {}
   } else { base.image = url }
+  const existingIndex = results.value.findIndex(r => r.id === base.id)
+  if (existingIndex > -1) {
+    results.value.splice(existingIndex, 1)
+  }
   results.value.unshift(base)
+  if (results.value.length > 3) {
+    results.value = results.value.slice(0, 3)
+  }
   try { delete jobModelMap.value[jobId] } catch {}
 }
 
@@ -690,11 +704,45 @@ const getAspectClass = (result: GenerationResult) => {
   return 'aspect-square'
 }
 
+const hydrateActiveTasks = async () => {
+  try {
+    const active = await get('/jobs/active?limit=20') as { id: string; status: string; progress: number }[]
+    const withDetails = await Promise.all(active.map(async job => {
+      try {
+        const detail = await get(`/jobs/${job.id}`) as { model?: string | null; prompt?: string | null; params?: Record<string, any> | null }
+        const model = detail?.model || '—'
+        const prompt = detail?.prompt || ''
+        jobModelMap.value[job.id] = model
+        return {
+          id: job.id,
+          status: normalizeStatus(job.status),
+          progress: job.progress,
+          model,
+          prompt,
+          isVideo: false
+        } as GenTask
+      } catch {
+        return {
+          id: job.id,
+          status: normalizeStatus(job.status),
+          progress: job.progress,
+          model: '—',
+          prompt: '',
+          isVideo: false
+        } as GenTask
+      }
+    }))
+    tasks.value = withDetails
+    withDetails.forEach(t => pollStatus(t.id))
+  } catch {}
+}
+
 onMounted(async () => {
   try { providers.value = await get('/providers') } catch {}
   try { const w = await get('/billing/wallet') as { balance: number }; walletBalance.value = typeof w?.balance === 'number' ? w.balance : null } catch {}
   try { const p = await get('/billing/prices') as Record<string, number>; if (p && typeof p === 'object') prices.value = p } catch {}
   form.model = availableModels.value[0] || 'qwen-image'
+  await hydrateActiveTasks()
   try {
     const url = sessionStorage.getItem('generator_source_url') || ''
     const type = sessionStorage.getItem('generator_source_type') || 'image'
@@ -980,7 +1028,8 @@ watch(() => form.model, (val) => {
 .result-image video {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: #000;
 }
 
 .result-overlay {
@@ -1117,7 +1166,12 @@ watch(() => form.model, (val) => {
 
 .results-header .count { margin-left: 8px; font-size: 12px; color: var(--muted); }
 .small-btn { padding: 6px 10px; font-size: 12px; }
-.task-card { display: flex; align-items: center; }
+.task-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  grid-column: 1 / -1;
+}
 .task-body { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 10px 12px; }
 .task-left { display: grid; grid-template-columns: minmax(52px, auto) minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; min-width: 0; }
 .task-id { font-weight: 600; }
