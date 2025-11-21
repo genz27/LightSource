@@ -76,9 +76,8 @@ async def simulate_generation(
             src_urls = job.params.extras.get("source_image_urls") if job.params and job.params.extras else None
         except Exception:
             src_urls = None
-        use_edit = bool(src_url) and ((job.model or "").startswith("qwen-image-edit") or ("edit" in (job.model or "")))
-        if not use_edit and isinstance(src_urls, list) and src_urls:
-            use_edit = ((job.model or "").startswith("qwen-image-edit") or ("edit" in (job.model or "")))
+        primary_image = src_url or (src_urls[0] if isinstance(src_urls, list) and src_urls else None)
+        use_edit = bool(primary_image) and ((job.model or "").startswith("qwen-image-edit") or ("edit" in (job.model or "")))
         if use_edit:
             qwen_task = asyncio.create_task(
                 asyncio.to_thread(
@@ -91,16 +90,16 @@ async def simulate_generation(
                     size=job.params.size,
                 )
             )
-        elif provider.name == "sora":
+        elif provider.name in {"sora", "nano-banana-2"}:
             qwen_task = asyncio.create_task(
                 asyncio.to_thread(
                     adapter.generate_image,
                     job.prompt,
-                    model=job.model or "sora-image",
+                    model=job.model or ("sora-image" if provider.name == "sora" else "gemini-3-pro-image-preview"),
                     api_key=provider.api_token,
                     base_url=provider.base_url or "",
                     size=job.params.size,
-                    image_url=src_url or None,
+                    image_url=primary_image or None,
                 )
             )
         else:

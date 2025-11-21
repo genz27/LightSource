@@ -32,9 +32,23 @@ class MajicFlusAdapter:
 
 class NanoBananaAdapter:
     def generate_image(
-        self, prompt: str, *, model: str, api_key: str | None, base_url: str, size: str | None = None
+        self,
+        prompt: str,
+        *,
+        model: str,
+        api_key: str | None,
+        base_url: str,
+        size: str | None = None,
+        image_url: str | None = None,
     ) -> Tuple[str, dict]:
-        return nano_banana_client.generate_image(prompt, model=model, api_key=api_key, base_url=base_url, size=size)
+        return nano_banana_client.generate_image(
+            prompt,
+            model=model,
+            api_key=api_key,
+            base_url=base_url,
+            size=size,
+            image_url=image_url,
+        )
 
 
 class SoraImageAdapter:

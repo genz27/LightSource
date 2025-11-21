@@ -332,7 +332,7 @@ async def ensure_default_providers(session: AsyncSession) -> None:
                 models=["sora-image", "sora-image-landscape", "sora-image-portrait"],
                 capabilities=["image"],
                 enabled=True,
-                notes="Text/Image to image (Sora chat completions)",
+                notes="Text & image-to-image (Sora chat completions)",
                 base_url="http://localhost:8000/",
             ),
             Provider(
@@ -341,7 +341,7 @@ async def ensure_default_providers(session: AsyncSession) -> None:
                 models=["gemini-3-pro-image-preview"],
                 capabilities=["image"],
                 enabled=True,
-                notes="Chat-based image generation",
+                notes="Chat-based text & image-to-image generation",
                 base_url="https://api.nano-banana-2.example/",
             ),
         ]
@@ -365,7 +365,7 @@ async def ensure_default_providers(session: AsyncSession) -> None:
                     models=["sora-image", "sora-image-landscape", "sora-image-portrait"],
                     capabilities=["image"],
                     enabled=True,
-                    notes="Text/Image to image (Sora chat completions)",
+                    notes="Text & image-to-image (Sora chat completions)",
                     base_url="http://localhost:8000/",
                 )
             )
@@ -377,7 +377,7 @@ async def ensure_default_providers(session: AsyncSession) -> None:
                     models=["gemini-3-pro-image-preview"],
                     capabilities=["image"],
                     enabled=True,
-                    notes="Chat-based image generation",
+                    notes="Chat-based text & image-to-image generation",
                     base_url="https://api.nano-banana-2.example/",
                 )
             )
