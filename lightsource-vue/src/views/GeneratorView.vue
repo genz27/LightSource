@@ -302,7 +302,9 @@ const availableModels = computed<string[]>(() => {
   }
   if (form.mode === 'image_to_image') {
     const edits = unique.filter(m => m.includes('edit'))
-    return edits.length ? edits : ['qwen-image-edit']
+    const others = unique.filter(m => !m.includes('edit'))
+    if (edits.length || others.length) return [...edits, ...others]
+    return ['qwen-image-edit']
   }
   return unique.length ? unique : ['sora2-video']
 })
