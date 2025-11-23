@@ -43,6 +43,37 @@ def _find_media_url(text: str) -> str | None:
     return None
 
 
+def _search_media_in_obj(obj: Any) -> str | None:
+    # Search nested structures for an HTTP or data URL embedded anywhere.
+    if isinstance(obj, str):
+        return _find_media_url(obj)
+    if isinstance(obj, list):
+        for item in obj:
+            url_val = _search_media_in_obj(item)
+            if url_val:
+                return url_val
+        return None
+    if isinstance(obj, dict):
+        # Prefer explicit url fields when present.
+        url_val = obj.get("url")
+        if isinstance(url_val, str):
+            cleaned = _find_media_url(url_val) or url_val
+            if cleaned:
+                return cleaned
+        # Common content-like fields where providers may embed markdown URLs.
+        for key in ("image_url", "text", "content", "parts"):
+            if key in obj:
+                url_val = _search_media_in_obj(obj[key])
+                if url_val:
+                    return url_val
+        # Fallback: scan remaining values.
+        for value in obj.values():
+            url_val = _search_media_in_obj(value)
+            if url_val:
+                return url_val
+    return None
+
+
 def _clean_url(url_val: str) -> str:
     return url_val.rstrip(")].>,\"'")
 
@@ -64,6 +95,9 @@ def _extract_url_from_parts(parts: Iterable[Any]) -> str | None:
             url_val = _find_media_url(text)
             if url_val:
                 return _clean_url(url_val)
+        url_val = _search_media_in_obj(part)
+        if url_val:
+            return _clean_url(url_val)
     return None
 
 
@@ -79,6 +113,10 @@ def _extract_image_url(message: dict[str, Any]) -> str:
         url_val = _find_media_url(content)
         if url_val:
             return _clean_url(url_val)
+    # Other nested structures (dict, mixed content)
+    url_val = _search_media_in_obj(content)
+    if url_val:
+        return _clean_url(url_val)
     raise RuntimeError("provider returned no image URL in message content")
 
 
@@ -118,6 +156,10 @@ def _extract_from_stream(resp: requests.Response) -> Tuple[str | None, list[dict
                 if url_val:
                     last_url = _clean_url(url_val)
                     break
+            url_val = _search_media_in_obj(content)
+            if url_val:
+                last_url = _clean_url(url_val)
+                break
     return last_url, chunks
 
 
