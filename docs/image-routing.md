@@ -10,10 +10,11 @@
 3. **适配器选择**：
    - `openai`、`sora-image`、`nano-banana-2` 等支持 chat-completions 图生图/改图的渠道走 `OpenAIImageAdapter`。
    - Qwen 等专用通道走对应适配器。
-4. **具体动作**：
-   - 有源图且 provider 具备 `image-edit` -> 调用 `adapter.edit_image`（OpenAI 与 sora-image 格式一致）。
+4. **模型选择与具体动作**：
+   - 有源图且 provider 具备 `image-edit` -> 调用 `adapter.edit_image`（OpenAI 与 sora-image 格式一致），并优先选择名称包含
+     `edit` 的模型（如 `gpt-image-1-edit`）。
    - 有源图但不支持改图 -> 作为参考图调用 `adapter.generate_image`（传 `image_url`）。
-   - 无源图 -> 直接调用 `adapter.generate_image`。
+   - 无源图 -> 直接调用 `adapter.generate_image`，并优先选择非 `edit` 的模型（如 `gpt-image-1`）。
 
 ## OpenAI 与 sora-image 区别/相同点
 - **相同点**：都使用 `v1/chat/completions`，消息中包含 `type: image_url`，请求/响应结构一致，可流式返回图片 URL。
