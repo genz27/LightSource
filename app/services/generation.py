@@ -80,8 +80,10 @@ async def simulate_generation(
         primary_image = src_url or (src_urls[0] if isinstance(src_urls, list) and src_urls else None)
         supports_image_edit = "image-edit" in provider_caps
         supports_image_url = provider.name in {"sora", "nano-banana-2"} or isinstance(adapter, OpenAIImageAdapter)
-        use_edit = bool(primary_image) and (supports_image_edit or (job.model or "").startswith("qwen-image-edit") or ("edit" in (job.model or "")))
-        model_to_use = job.model or ((provider.models or ["qwen-image"])[0])
+        use_edit = bool(primary_image) and (
+            supports_image_edit or (job.model or "").startswith("qwen-image-edit") or ("edit" in (job.model or ""))
+        )
+        model_to_use = _select_model(provider.models or [], job.model, use_edit)
 
         if use_edit and hasattr(adapter, "edit_image"):
             qwen_task = asyncio.create_task(
@@ -357,4 +359,42 @@ async def simulate_generation(
         metrics.mark_finished(job.id)
 def _valid_url(u: str | None) -> bool:
     return isinstance(u, str) and (u.startswith("http://") or u.startswith("https://"))
+
+
+def _select_model(provider_models: list[str], requested: str | None, use_edit: bool) -> str:
+    """Pick a provider model that matches the intended flow (generate vs edit).
+
+    - If the caller requested a model, prefer it unless it mismatches the flow and
+      a better-suited model exists in the provider list.
+    - Otherwise, choose the first matching model by capability (edit vs generate),
+      falling back to the provider's first declared model.
+    """
+
+    requested = (requested or "").strip()
+    if requested:
+        req_lower = requested.lower()
+        wants_edit = "edit" in req_lower
+        if use_edit and not wants_edit:
+            alt = _first_model(provider_models, want_edit=True)
+            if alt:
+                return alt
+        if not use_edit and wants_edit:
+            alt = _first_model(provider_models, want_edit=False)
+            if alt:
+                return alt
+        return requested
+
+    fallback = _first_model(provider_models, want_edit=use_edit)
+    return fallback or (provider_models[0] if provider_models else "")
+
+
+def _first_model(models: list[str], *, want_edit: bool) -> str | None:
+    for model in models:
+        model_lower = model.lower()
+        has_edit = "edit" in model_lower
+        if want_edit and has_edit:
+            return model
+        if not want_edit and not has_edit:
+            return model
+    return None
 
