@@ -19,3 +19,42 @@
 ## OpenAI 与 sora-image 区别/相同点
 - **相同点**：都使用 `v1/chat/completions`，消息中包含 `type: image_url`，请求/响应结构一致，可流式返回图片 URL。
 - **区别**：在 provider 名称和默认模型上有所不同，但路由逻辑和能力判定一致，只要 `capabilities` 包含 `image`/`image-edit` 就会走同一套处理。
+
+## 请求示例（OpenAI/Sora 格式）
+- **改图/参考图**：包含 `image_url`，流式返回图片地址。
+
+  ```json
+  {
+    "model": "gemini-2.5-flash-image",
+    "temperature": 1,
+    "top_p": 1,
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {"type": "text", "text": "改成猪猪"},
+          {"type": "image_url", "image_url": {"url": "data:image/png;base64,iVBOxxxx"}}
+        ]
+      }
+    ],
+    "stream": true,
+    "stream_options": {"include_usage": true}
+  }
+  ```
+
+- **文生图**：只包含文本内容，不带 `image_url`。
+
+  ```json
+  {
+    "model": "gemini-2.5-flash-image",
+    "temperature": 1,
+    "top_p": 1,
+    "messages": [
+      {
+        "role": "user",
+        "content": [{"type": "text", "text": "一只可爱的太空小熊"}]
+      }
+    ],
+    "stream": false
+  }
+  ```

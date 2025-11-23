@@ -127,9 +127,13 @@ def generate_image(
     size: str | None = None,
     image_url: str | None = None,
     provider_name: str = "openai-compatible",
+    temperature: float | None = 1,
+    top_p: float | None = 1,
+    stream_options: dict[str, Any] | None = None,
+    stream: bool | None = None,
 ) -> Tuple[str, Dict[str, Any]]:
     url = _normalize_base_url(base_url)
-    stream = bool(image_url)
+    stream = bool(image_url) if stream is None else bool(stream)
     payload: Dict[str, Any] = {
         "model": model or DEFAULT_MODEL,
         "messages": [
@@ -140,6 +144,12 @@ def generate_image(
         ],
         "stream": stream,
     }
+    if temperature is not None:
+        payload["temperature"] = temperature
+    if top_p is not None:
+        payload["top_p"] = top_p
+    if stream or stream_options:
+        payload["stream_options"] = stream_options or {"include_usage": True}
     if size:
         payload["size"] = size
     response = requests.post(
@@ -184,6 +194,9 @@ def edit_image(
     base_url: str | None = None,
     size: str | None = None,
     provider_name: str = "openai-compatible",
+    temperature: float | None = 1,
+    top_p: float | None = 1,
+    stream_options: dict[str, Any] | None = None,
 ) -> Tuple[str, Dict[str, Any]]:
     urls: list[str] = []
     if isinstance(image_url, list):
@@ -203,6 +216,12 @@ def edit_image(
             }
         ],
     }
+    if temperature is not None:
+        payload["temperature"] = temperature
+    if top_p is not None:
+        payload["top_p"] = top_p
+    if stream_options:
+        payload["stream_options"] = stream_options
     if size:
         payload["size"] = size
 
