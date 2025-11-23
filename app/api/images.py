@@ -103,13 +103,19 @@ async def edit_image(payload: dict, store: MemoryStore = Depends(get_store), ses
         if not (image.startswith("http://") or image.startswith("https://")):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=api_error("Image URL must be http/https"))
         urls = [image]
-    def _normalize_model(name: str) -> str:
+    def _strip_edit_suffix(name: str) -> str:
         try:
-            return name.strip()
+            lower = name.lower()
         except Exception:
             return name
+        if lower.startswith("qwen"):
+            return name
+        for suffix in ("-edit", "_edit"):
+            if lower.endswith(suffix):
+                return name[: -len(suffix)]
+        return name
 
-    normalized_model = _normalize_model(model or "")
+    normalized_model = _strip_edit_suffix(model or "")
     normalized_lower = normalized_model.lower()
     kind = JobKind.TEXT_TO_IMAGE
     extras = {"source_image_urls": urls} if urls and len(urls) > 1 else {"source_image_url": urls[0]}
@@ -120,7 +126,7 @@ async def edit_image(payload: dict, store: MemoryStore = Depends(get_store), ses
     if "sora" in normalized_lower:
         provider = "sora"
         internal_model = normalized_model or "sora-image"
-    elif ("nano" in normalized_lower) or ("gemini" in normalized_lower):
+    elif ("nano" in normalized_lower) or ("gemini-3-pro-image-preview" in normalized_lower):
         provider = "nano-banana-2"
         internal_model = normalized_model or "gemini-3-pro-image-preview"
     elif "qwen" in normalized_lower or "edit" in normalized_lower:
