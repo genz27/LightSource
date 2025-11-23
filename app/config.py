@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     # Debug flag for provider call tracing
     debug: bool = Field(False, env="DEBUG")
 
-    # External image upload for qwen-image-edit (Cloudflare Worker)
+    # External image upload (e.g. Cloudflare Worker)
     ext_image_upload_base: str | None = Field("https://img.scdn.io/api/v1.php", env="EXT_IMAGE_UPLOAD_BASE")
     ext_image_upload_auth_key: str | None = Field(None, env="EXT_IMAGE_UPLOAD_AUTH_KEY")
 
