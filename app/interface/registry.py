@@ -5,6 +5,7 @@ from typing import Any, Tuple
 from app.interface import flux as flux_client
 from app.interface import majicflus as majicflus_client
 from app.interface import nano_banana as nano_banana_client
+from app.interface import openai_image as openai_image_client
 from app.interface import qwen as qwen_client
 from app.interface import sora2 as sora2_client
 from app.interface import sora_image as sora_image_client
@@ -48,6 +49,55 @@ class NanoBananaAdapter:
             base_url=base_url,
             size=size,
             image_url=image_url,
+        )
+
+
+class OpenAIImageAdapter:
+    def __init__(self, provider_name: str):
+        self.provider_name = provider_name
+
+    def generate_image(
+        self,
+        prompt: str,
+        *,
+        model: str,
+        api_key: str | None,
+        base_url: str,
+        size: str | None = None,
+        image_url: str | None = None,
+        api_style: str | None = None,
+    ) -> Tuple[str, dict]:
+        return openai_image_client.generate_image(
+            prompt,
+            model=model,
+            api_key=api_key,
+            base_url=base_url,
+            size=size,
+            image_url=image_url,
+            provider_name=self.provider_name,
+            api_style=api_style,
+        )
+
+    def edit_image(
+        self,
+        image_url: list[str] | str,
+        prompt: str,
+        *,
+        model: str,
+        api_key: str | None,
+        base_url: str,
+        size: str | None = None,
+        api_style: str | None = None,
+    ) -> Tuple[str, dict]:
+        return openai_image_client.edit_image(
+            image_url,
+            prompt,
+            model=model,
+            api_key=api_key,
+            base_url=base_url,
+            size=size,
+            provider_name=self.provider_name,
+            api_style=api_style,
         )
 
 
@@ -223,7 +273,13 @@ class Sora2Adapter:
         )
 
 
-def resolve_adapter(name: str):
+def resolve_adapter(provider) -> Any | None:
+    if not provider:
+        return None
+
+    name = provider.name
+    capabilities = {c.lower() for c in (provider.capabilities or [])}
+
     if name == "qwen":
         return QwenAdapter()
     if name == "sora2":
@@ -236,4 +292,6 @@ def resolve_adapter(name: str):
         return MajicFlusAdapter()
     if name == "nano-banana-2":
         return NanoBananaAdapter()
+    if "image" in capabilities or "image-edit" in capabilities or "edit_image" in capabilities:
+        return OpenAIImageAdapter(name)
     return None

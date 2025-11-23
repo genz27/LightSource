@@ -157,6 +157,7 @@ async def get_job_status(
     except Exception:
         runtime_job = mem_job or job
     extras = getattr(job.params, "extras", {}) or {}
+    error_detail = extras.get("error_detail")
     provider_resp_existing = extras.get("provider_response") or {}
     provider_raw_existing = provider_resp_existing.get("raw") or {}
     vendor_video_id = provider_raw_existing.get("video_id") or None
@@ -366,7 +367,7 @@ async def get_job_status(
             "image_provided": bool(extras.get("source_image_url")),
             "result_url": result_url,
             "video_url": result_url,
-            "error_message": provider_error_message or job.error,
+            "error_message": error_detail or provider_error_message or job.error,
             "created_at": provider_created_at or (job.created_at.isoformat() + "Z"),
             "updated_at": provider_updated_at or (job.updated_at.isoformat() + "Z"),
         }
@@ -386,7 +387,8 @@ async def get_job_status(
             "prompt": job.prompt,
             "result_url": result_url,
             "image_url": result_url,
-            "error_message": job.error,
+            "error_message": error_detail or job.error,
+            "error_detail": error_detail,
             "created_at": job.created_at.isoformat() + "Z",
             "updated_at": job.updated_at.isoformat() + "Z",
         }
@@ -416,7 +418,7 @@ async def get_jobs_status(
                 status=job.status,
                 progress=job.progress,
                 asset_id=job.asset_id,
-                error=job.error,
+                error=getattr(job.params, "extras", {}).get("error_detail") or job.error,
                 updated_at=job.updated_at,
             )
         )
@@ -554,7 +556,7 @@ def _infer_provider(model: str | None) -> str | None:
         return "sora"
     if "sora" in m:
         return "sora2"
-    if "nano" in m or "gemini-3-pro-image-preview" in m:
+    if "nano" in m or "gemini-3-pro-image-preview" in m or "gemini-2.5-flash-image" in m:
         return "nano-banana-2"
     if "qwen" in m:
         return "qwen"
@@ -566,28 +568,8 @@ def _infer_provider(model: str | None) -> str | None:
 
 
 def _validate_model_kind(kind: JobKind, model: str | None) -> None:
-    if model is None:
-        return
-    pairs = {
-        JobKind.TEXT_TO_IMAGE: {
-            "qwen-image",
-            "qwen-image-edit",
-            "MusePublic/489_ckpt_FLUX_1",
-            "MAILAND/majicflus_v1",
-            "sora-image",
-            "sora-image-landscape",
-            "sora-image-portrait",
-            "gemini-3-pro-image-preview",
-        },
-        JobKind.TEXT_TO_VIDEO: {"sora2-video"},
-        JobKind.IMAGE_TO_VIDEO: {"sora2-video"},
-    }
-    allowed = pairs.get(kind, set())
-    if allowed and model not in allowed:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Model '{model}' is not valid for kind '{kind.value}'",
-        )
+    # Accept all model strings; provider selection is driven by channel capabilities.
+    return
 
 
 def _validate_required_orientation(kind: JobKind, orientation: Orientation | None) -> None:

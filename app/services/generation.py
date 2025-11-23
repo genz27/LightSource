@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime as dt
+import re
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +17,7 @@ from app.services.persistence import (
 )
 from app.services.storage import placeholder_output
 from app.services.store import MemoryStore
-from app.interface.registry import resolve_adapter
+from app.interface.registry import OpenAIImageAdapter, resolve_adapter
 from app.services.metrics import metrics
 
 
@@ -63,8 +64,10 @@ async def simulate_generation(
     attempted_external = False
     async with SessionLocal() as session:
         provider = await get_provider_by_name(session, job.provider) if job.provider else None
-    adapter = resolve_adapter(provider.name) if provider and provider.enabled else None
-    if adapter and job.kind == JobKind.TEXT_TO_IMAGE and provider:
+    adapter = resolve_adapter(provider) if provider and provider.enabled else None
+    provider_caps = {c.lower() for c in (provider.capabilities or [])} if provider else set()
+    image_api_style = _image_api_style(provider_caps)
+    if adapter and job.kind == JobKind.TEXT_TO_IMAGE and provider and ("image" in provider_caps or "image-edit" in provider_caps or "edit_image" in provider_caps):
         attempted_external = True
         src_url = None
         try:
@@ -77,29 +80,39 @@ async def simulate_generation(
         except Exception:
             src_urls = None
         primary_image = src_url or (src_urls[0] if isinstance(src_urls, list) and src_urls else None)
-        use_edit = bool(primary_image) and ((job.model or "").startswith("qwen-image-edit") or ("edit" in (job.model or "")))
-        if use_edit:
+        supports_image_edit = "image-edit" in provider_caps or "edit_image" in provider_caps
+        supports_image_url = provider.name in {"sora", "nano-banana-2"} or (
+            isinstance(adapter, OpenAIImageAdapter) and image_api_style == "chat-completions"
+        )
+        use_edit = bool(primary_image) and (
+            supports_image_edit or (job.model or "").startswith("qwen-image-edit") or ("edit" in (job.model or ""))
+        )
+        model_to_use = _select_model(provider.models or [], job.model, use_edit)
+
+        if use_edit and hasattr(adapter, "edit_image"):
             qwen_task = asyncio.create_task(
                 asyncio.to_thread(
                     adapter.edit_image,
                     src_urls if isinstance(src_urls, list) and src_urls else (src_url or ""),
                     job.prompt,
-                    model=job.model or "qwen-image-edit",
+                    model=model_to_use,
                     api_key=provider.api_token,
                     base_url=provider.base_url or "",
                     size=job.params.size,
+                    api_style=image_api_style if isinstance(adapter, OpenAIImageAdapter) else None,
                 )
             )
-        elif provider.name in {"sora", "nano-banana-2"}:
+        elif supports_image_url:
             qwen_task = asyncio.create_task(
                 asyncio.to_thread(
                     adapter.generate_image,
                     job.prompt,
-                    model=job.model or ("sora-image" if provider.name == "sora" else "gemini-3-pro-image-preview"),
+                    model=model_to_use,
                     api_key=provider.api_token,
                     base_url=provider.base_url or "",
                     size=job.params.size,
                     image_url=primary_image or None,
+                    api_style=image_api_style if isinstance(adapter, OpenAIImageAdapter) else None,
                 )
             )
         else:
@@ -107,10 +120,11 @@ async def simulate_generation(
                 asyncio.to_thread(
                     adapter.generate_image,
                     job.prompt,
-                    model=job.model or ((provider.models or ["qwen-image"])[0]),
+                    model=model_to_use,
                     api_key=provider.api_token,
                     base_url=provider.base_url or "",
                     size=job.params.size,
+                    api_style=image_api_style if isinstance(adapter, OpenAIImageAdapter) else None,
                 )
             )
 
@@ -278,7 +292,9 @@ async def simulate_generation(
         async with SessionLocal() as session:
             await update_job_fields(session, job.id, params=params.dict() if hasattr(params, "dict") else params)
 
-        if attempted_external and not _valid_url(image_url):
+        normalized_url = _normalize_output_url(image_url)
+
+        if attempted_external and not normalized_url:
             err_payload = provider_response
             try:
                 extras = job.params.extras if job.params and job.params.extras else {}
@@ -293,7 +309,7 @@ async def simulate_generation(
             metrics.mark_finished(job.id)
             store.update_job(job.id, status=JobStatus.FAILED, error=str(err_payload))
             return
-        output_url = image_url if _valid_url(image_url) else placeholder_output(job.kind.value, job.id)[1]
+        output_url = normalized_url or placeholder_output(job.kind.value, job.id)[1]
 
         asset_meta = {
             "model": job.model,
@@ -350,6 +366,85 @@ async def simulate_generation(
             await update_job_fields(session, job.id, status=JobStatus.FAILED, error=str(exc))
         metrics.record_transition(JobStatus.RUNNING, JobStatus.FAILED)
         metrics.mark_finished(job.id)
-def _valid_url(u: str | None) -> bool:
-    return isinstance(u, str) and (u.startswith("http://") or u.startswith("https://"))
+
+
+_DATA_URL_RE = re.compile(r"^data:image/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\r\n]+$")
+_BASE64_RE = re.compile(r"^[A-Za-z0-9+/=\r\n]+$")
+
+
+def _normalize_output_url(u: str | None) -> str | None:
+    """Accept HTTP(S) URLs and inline base64 image data.
+
+    Providers may return:
+    - http/https URLs
+    - data:image;base64 URLs
+    - raw base64 payloads (e.g., b64_json from /v1/images/generations)
+    """
+
+    if not isinstance(u, str):
+        return None
+
+    val = u.strip()
+    if not val:
+        return None
+
+    if val.startswith("http://") or val.startswith("https://"):
+        return val
+
+    if _DATA_URL_RE.match(val):
+        return val
+
+    if len(val) > 100 and _BASE64_RE.match(val):
+        return f"data:image/png;base64,{val}"
+
+    return None
+
+
+def _image_api_style(capabilities: set[str]) -> str:
+    """Return preferred image API style for OpenAI-compatible providers."""
+
+    caps = {c.lower() for c in capabilities}
+    if "images-generations" in caps:
+        return "images-generations"
+    if "chat-completions" in caps:
+        return "chat-completions"
+    return "chat-completions"
+
+
+def _select_model(provider_models: list[str], requested: str | None, use_edit: bool) -> str:
+    """Pick a provider model that matches the intended flow (generate vs edit).
+
+    - If the caller requested a model, prefer it unless it mismatches the flow and
+      a better-suited model exists in the provider list.
+    - Otherwise, choose the first matching model by capability (edit vs generate),
+      falling back to the provider's first declared model.
+    """
+
+    requested = (requested or "").strip()
+    if requested:
+        req_lower = requested.lower()
+        wants_edit = "edit" in req_lower
+        if use_edit and not wants_edit:
+            alt = _first_model(provider_models, want_edit=True)
+            if alt:
+                return alt
+        if not use_edit and wants_edit:
+            alt = _first_model(provider_models, want_edit=False)
+            if alt:
+                return alt
+        return requested
+
+    fallback = _first_model(provider_models, want_edit=use_edit)
+    return fallback or (provider_models[0] if provider_models else "")
+
+
+def _first_model(models: list[str], *, want_edit: bool) -> str | None:
+    for model in models:
+        model_lower = model.lower()
+        has_edit = "edit" in model_lower
+        if want_edit and has_edit:
+            return model
+        if not want_edit and not has_edit:
+            return model
+    return None
 
