@@ -308,13 +308,6 @@ async def ensure_default_providers(session: AsyncSession) -> None:
     existing = await session.scalars(select(Provider))
     existing_list = list(existing)
     for p in existing_list:
-        if p.name == "qwen":
-            models = p.models or []
-            if "qwen-image-edit" not in models:
-                p.models = models + ["qwen-image-edit"]
-            caps = {c.lower() for c in (p.capabilities or [])}
-            if "image-edit" not in caps or "edit_image" not in caps:
-                p.capabilities = list(caps | {"image", "image-edit", "edit_image", "images-generations"})
         if p.name == "sora":
             models = p.models or []
             if "sora-image-edit" not in models:

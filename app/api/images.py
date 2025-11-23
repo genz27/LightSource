@@ -17,6 +17,14 @@ from app.services.taskqueue import get_task_queue
 
 router = APIRouter()
 
+
+def _normalize_model(name: str | None) -> str:
+    try:
+        return (name or "").strip()
+    except Exception:
+        return name or ""
+
+
 def _status_to_external(s: JobStatus) -> str:
     if s == JobStatus.QUEUED:
         return "queued"
@@ -36,15 +44,15 @@ async def create_image(payload: dict, store: MemoryStore = Depends(get_store), s
     settings = get_settings()
     if settings.public_api_key and x_api_key != settings.public_api_key:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=api_error("invalid api key"))
-    model = payload.get("model")
+    model = _normalize_model(payload.get("model"))
     prompt = payload.get("prompt")
     if not prompt or not isinstance(prompt, str):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=api_error("Prompt cannot be empty"))
-    if not model or not isinstance(model, str):
+    if not model:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=api_error("Model is required"))
     if "edit" in model:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=api_error("image-edit 模型不允许用于文生图，请使用 /v1/images/edits"))
-    internal_model = "qwen-image"
+    internal_model = model or "gpt-image-1"
     kind = JobKind.TEXT_TO_IMAGE
     params = JobParams(extras={})
 
@@ -52,7 +60,7 @@ async def create_image(payload: dict, store: MemoryStore = Depends(get_store), s
         new_job_id = await next_job_id(session)
     except Exception:
         new_job_id = None
-    job = store.create_job(JobCreate(prompt=prompt, kind=kind, model=internal_model, provider="qwen", is_public=True, params=params, source_image_name=None, owner_id=None), job_id=new_job_id)
+    job = store.create_job(JobCreate(prompt=prompt, kind=kind, model=internal_model, provider="openai", is_public=True, params=params, source_image_name=None, owner_id=None), job_id=new_job_id)
     await persist_job(session, job)
 
     tq = get_task_queue()
@@ -80,14 +88,14 @@ async def edit_image(payload: dict, store: MemoryStore = Depends(get_store), ses
     settings = get_settings()
     if settings.public_api_key and x_api_key != settings.public_api_key:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=api_error("invalid api key"))
-    model = payload.get("model")
+    model = _normalize_model(payload.get("model"))
     prompt = payload.get("prompt")
     image = payload.get("image")
     images = payload.get("images")
     size = payload.get("size")
     if not prompt or not isinstance(prompt, str):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=api_error("Prompt cannot be empty"))
-    if not model or not isinstance(model, str):
+    if not model:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=api_error("Model is required"))
     urls: list[str] | None = None
     if images is not None:
@@ -103,28 +111,22 @@ async def edit_image(payload: dict, store: MemoryStore = Depends(get_store), ses
         if not (image.startswith("http://") or image.startswith("https://")):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=api_error("Image URL must be http/https"))
         urls = [image]
-    def _normalize_model(name: str) -> str:
-        try:
-            return name.strip()
-        except Exception:
-            return name
-
-    normalized_model = _normalize_model(model or "")
+    normalized_model = model
     normalized_lower = normalized_model.lower()
     kind = JobKind.TEXT_TO_IMAGE
     extras = {"source_image_urls": urls} if urls and len(urls) > 1 else {"source_image_url": urls[0]}
     params = JobParams(size=size, extras=extras)
 
-    provider = "qwen"
-    internal_model = "qwen-image-edit"
+    provider = "openai"
+    internal_model = normalized_model or "gpt-image-1-edit"
     if "sora" in normalized_lower:
         provider = "sora"
         internal_model = normalized_model or "sora-image"
     elif ("nano" in normalized_lower) or ("gemini" in normalized_lower):
         provider = "nano-banana-2"
         internal_model = normalized_model or "gemini-3-pro-image-preview"
-    elif "qwen" in normalized_lower or "edit" in normalized_lower:
-        internal_model = normalized_model or "qwen-image-edit"
+    elif ("gpt-image" in normalized_lower) or ("dall-e" in normalized_lower) or ("openai" in normalized_lower):
+        internal_model = normalized_model or "gpt-image-1-edit"
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=api_error("不支持的图像编辑模型"))
 

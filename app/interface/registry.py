@@ -6,19 +6,8 @@ from app.interface import flux as flux_client
 from app.interface import majicflus as majicflus_client
 from app.interface import nano_banana as nano_banana_client
 from app.interface import openai_image as openai_image_client
-from app.interface import qwen as qwen_client
 from app.interface import sora2 as sora2_client
 from app.interface import sora_image as sora_image_client
-
-
-class QwenAdapter:
-    def generate_image(self, prompt: str, *, model: str, api_key: str, base_url: str, size: str | None = None) -> Tuple[str, dict]:
-        return qwen_client.generate_image(prompt, model=model, api_key=api_key, base_url=base_url, size=size)
-
-    def edit_image(
-        self, image_url: list[str] | str, prompt: str, *, model: str, api_key: str, base_url: str, size: str | None = None
-    ) -> Tuple[str, dict]:
-        return qwen_client.edit_image(image_url, prompt, model=model, api_key=api_key, base_url=base_url, size=size)
 
 
 class FluxAdapter:
@@ -280,8 +269,6 @@ def resolve_adapter(provider) -> Any | None:
     name = provider.name
     capabilities = {c.lower() for c in (provider.capabilities or [])}
 
-    if name == "qwen":
-        return QwenAdapter()
     if name == "sora2":
         return Sora2Adapter()
     if name == "sora":
