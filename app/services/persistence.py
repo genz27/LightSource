@@ -312,7 +312,7 @@ async def ensure_default_providers(session: AsyncSession) -> None:
                 name="qwen",
                 display_name="Qwen",
                 models=["qwen-image", "qwen-image-edit"],
-                capabilities=["image"],
+                capabilities=["image", "image-edit"],
                 enabled=True,
                 notes="Text/Image edit (ModelScope Qwen)",
                 base_url="https://api-inference.modelscope.cn/",
@@ -330,7 +330,7 @@ async def ensure_default_providers(session: AsyncSession) -> None:
                 name="sora",
                 display_name="Sora Image",
                 models=["sora-image", "sora-image-landscape", "sora-image-portrait", "sora-image-edit"],
-                capabilities=["image"],
+                capabilities=["image", "image-edit"],
                 enabled=True,
                 notes="Text & image-to-image (Sora chat completions)",
                 base_url="http://localhost:8000/",
@@ -338,8 +338,8 @@ async def ensure_default_providers(session: AsyncSession) -> None:
             Provider(
                 name="nano-banana-2",
                 display_name="Nano Banana 2",
-                models=["gemini-3-pro-image-preview", "gemini-3-pro-image-preview-edit"],
-                capabilities=["image"],
+                models=["gemini-3-pro-image-preview", "gemini-3-pro-image-preview-edit", "gemini-2.5-flash-image"],
+                capabilities=["image", "image-edit"],
                 enabled=True,
                 notes="Chat-based text & image-to-image generation",
                 base_url="https://api.nano-banana-2.example/",
@@ -356,14 +356,25 @@ async def ensure_default_providers(session: AsyncSession) -> None:
                 models = p.models or []
                 if "qwen-image-edit" not in models:
                     p.models = models + ["qwen-image-edit"]
+                caps = {c.lower() for c in (p.capabilities or [])}
+                if "image-edit" not in caps:
+                    p.capabilities = list(caps | {"image", "image-edit"})
             if p.name == "sora":
                 models = p.models or []
                 if "sora-image-edit" not in models:
                     p.models = models + ["sora-image-edit"]
+                caps = {c.lower() for c in (p.capabilities or [])}
+                if "image-edit" not in caps:
+                    p.capabilities = list(caps | {"image", "image-edit"})
             if p.name == "nano-banana-2":
                 models = p.models or []
                 if "gemini-3-pro-image-preview-edit" not in models:
                     p.models = models + ["gemini-3-pro-image-preview-edit"]
+                if "gemini-2.5-flash-image" not in models:
+                    p.models = models + ["gemini-2.5-flash-image"]
+                caps = {c.lower() for c in (p.capabilities or [])}
+                if "image-edit" not in caps:
+                    p.capabilities = list(caps | {"image", "image-edit"})
         names = {p.name for p in existing_list}
         if "sora" not in names:
             session.add(
@@ -371,7 +382,7 @@ async def ensure_default_providers(session: AsyncSession) -> None:
                     name="sora",
                     display_name="Sora Image",
                     models=["sora-image", "sora-image-landscape", "sora-image-portrait", "sora-image-edit"],
-                    capabilities=["image"],
+                    capabilities=["image", "image-edit"],
                     enabled=True,
                     notes="Text & image-to-image (Sora chat completions)",
                     base_url="http://localhost:8000/",
@@ -382,8 +393,8 @@ async def ensure_default_providers(session: AsyncSession) -> None:
                 Provider(
                     name="nano-banana-2",
                     display_name="Nano Banana 2",
-                    models=["gemini-3-pro-image-preview", "gemini-3-pro-image-preview-edit"],
-                    capabilities=["image"],
+                    models=["gemini-3-pro-image-preview", "gemini-3-pro-image-preview-edit", "gemini-2.5-flash-image"],
+                    capabilities=["image", "image-edit"],
                     enabled=True,
                     notes="Chat-based text & image-to-image generation",
                     base_url="https://api.nano-banana-2.example/",
@@ -425,7 +436,7 @@ async def update_provider_db(
     if capabilities is not None:
         try:
             caps = [str(c).strip().lower() for c in (capabilities or []) if str(c).strip()]
-            allowed = {"image", "video"}
+            allowed = {"image", "image-edit", "video"}
             provider.capabilities = [c for c in caps if c in allowed]
         except Exception:
             provider.capabilities = provider.capabilities or []

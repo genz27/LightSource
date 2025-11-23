@@ -16,7 +16,7 @@ from app.services.persistence import (
 )
 from app.services.storage import placeholder_output
 from app.services.store import MemoryStore
-from app.interface.registry import resolve_adapter
+from app.interface.registry import OpenAIImageAdapter, resolve_adapter
 from app.services.metrics import metrics
 
 
@@ -63,8 +63,9 @@ async def simulate_generation(
     attempted_external = False
     async with SessionLocal() as session:
         provider = await get_provider_by_name(session, job.provider) if job.provider else None
-    adapter = resolve_adapter(provider.name) if provider and provider.enabled else None
-    if adapter and job.kind == JobKind.TEXT_TO_IMAGE and provider:
+    adapter = resolve_adapter(provider) if provider and provider.enabled else None
+    provider_caps = {c.lower() for c in (provider.capabilities or [])} if provider else set()
+    if adapter and job.kind == JobKind.TEXT_TO_IMAGE and provider and ("image" in provider_caps or "image-edit" in provider_caps):
         attempted_external = True
         src_url = None
         try:
@@ -77,25 +78,29 @@ async def simulate_generation(
         except Exception:
             src_urls = None
         primary_image = src_url or (src_urls[0] if isinstance(src_urls, list) and src_urls else None)
-        use_edit = bool(primary_image) and ((job.model or "").startswith("qwen-image-edit") or ("edit" in (job.model or "")))
-        if use_edit:
+        supports_image_edit = "image-edit" in provider_caps
+        supports_image_url = provider.name in {"sora", "nano-banana-2"} or isinstance(adapter, OpenAIImageAdapter)
+        use_edit = bool(primary_image) and (supports_image_edit or (job.model or "").startswith("qwen-image-edit") or ("edit" in (job.model or "")))
+        model_to_use = job.model or ((provider.models or ["qwen-image"])[0])
+
+        if use_edit and hasattr(adapter, "edit_image"):
             qwen_task = asyncio.create_task(
                 asyncio.to_thread(
                     adapter.edit_image,
                     src_urls if isinstance(src_urls, list) and src_urls else (src_url or ""),
                     job.prompt,
-                    model=job.model or "qwen-image-edit",
+                    model=model_to_use,
                     api_key=provider.api_token,
                     base_url=provider.base_url or "",
                     size=job.params.size,
                 )
             )
-        elif provider.name in {"sora", "nano-banana-2"}:
+        elif supports_image_url:
             qwen_task = asyncio.create_task(
                 asyncio.to_thread(
                     adapter.generate_image,
                     job.prompt,
-                    model=job.model or ("sora-image" if provider.name == "sora" else "gemini-3-pro-image-preview"),
+                    model=model_to_use,
                     api_key=provider.api_token,
                     base_url=provider.base_url or "",
                     size=job.params.size,
@@ -107,7 +112,7 @@ async def simulate_generation(
                 asyncio.to_thread(
                     adapter.generate_image,
                     job.prompt,
-                    model=job.model or ((provider.models or ["qwen-image"])[0]),
+                    model=model_to_use,
                     api_key=provider.api_token,
                     base_url=provider.base_url or "",
                     size=job.params.size,
