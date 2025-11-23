@@ -65,6 +65,7 @@ class OpenAIImageAdapter:
         base_url: str,
         size: str | None = None,
         image_url: str | None = None,
+        api_style: str | None = None,
     ) -> Tuple[str, dict]:
         return openai_image_client.generate_image(
             prompt,
@@ -74,6 +75,7 @@ class OpenAIImageAdapter:
             size=size,
             image_url=image_url,
             provider_name=self.provider_name,
+            api_style=api_style,
         )
 
     def edit_image(
@@ -85,6 +87,7 @@ class OpenAIImageAdapter:
         api_key: str | None,
         base_url: str,
         size: str | None = None,
+        api_style: str | None = None,
     ) -> Tuple[str, dict]:
         return openai_image_client.edit_image(
             image_url,
@@ -94,6 +97,7 @@ class OpenAIImageAdapter:
             base_url=base_url,
             size=size,
             provider_name=self.provider_name,
+            api_style=api_style,
         )
 
 
@@ -288,6 +292,6 @@ def resolve_adapter(provider) -> Any | None:
         return MajicFlusAdapter()
     if name == "nano-banana-2":
         return NanoBananaAdapter()
-    if "image" in capabilities or "image-edit" in capabilities:
+    if "image" in capabilities or "image-edit" in capabilities or "edit_image" in capabilities:
         return OpenAIImageAdapter(name)
     return None

@@ -5,7 +5,9 @@
 ![流程示意](./image-routing.svg)
 
 ## 关键判定逻辑
-1. **Provider 能力**：`capabilities` 包含 `image` 才能生图，包含 `image-edit` 才能改图。
+1. **Provider 能力**：`capabilities` 中：
+   - `image` 控制基础生图；`image-edit` 或 `edit_image` 控制改图。
+   - `chat-completions` 与 `images-generations` 用于区分走 `v1/chat/completions` 还是 `v1/images/generations` 协议（不配置时默认 chat-completions 兼容）。
 2. **是否携带源图**：`job.params.extras.source_image_url` 或 `source_image_urls` 存在时，认为是改图/参考图请求。
 3. **适配器选择**：
    - `openai`、`sora-image`、`nano-banana-2` 等支持 chat-completions 图生图/改图的渠道走 `OpenAIImageAdapter`。

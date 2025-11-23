@@ -53,8 +53,16 @@
           </label>
           <div class="caps">
             <label class="switch"><input type="checkbox" v-model="capImage" /><span>Image</span></label>
+            <label class="switch"><input type="checkbox" v-model="capEditImage" /><span>Image Edit</span></label>
             <label class="switch"><input type="checkbox" v-model="capVideo" /><span>Video</span></label>
           </div>
+          <div class="section-title">Image API</div>
+          <div class="caps">
+            <label class="switch"><input type="checkbox" v-model="capChatCompletions" /><span>chat/completions</span></label>
+            <label class="switch"><input type="checkbox" v-model="capImagesGenerations" /><span>images/generations</span></label>
+          </div>
+          <input v-model="newCaps" placeholder="additional capabilities (comma, optional)" />
+          <div class="hint">Use the API flags to control whether image requests use chat completions or images/generations.</div>
           
           <div class="section-title">Models</div>
           <input v-model="newModels" placeholder="models (comma)" />
@@ -96,7 +104,18 @@
         <input v-model="editBase" placeholder="base_url" />
         <input v-model="editNotes" placeholder="notes" />
         <input v-model="editModels" placeholder="models (comma)" />
-        <input v-model="editCaps" placeholder="capabilities (comma)" />
+        <div class="section-title">Capabilities</div>
+        <div class="caps">
+          <label class="switch"><input type="checkbox" v-model="editCapImage" /><span>Image</span></label>
+          <label class="switch"><input type="checkbox" v-model="editCapEditImage" /><span>Image Edit</span></label>
+          <label class="switch"><input type="checkbox" v-model="editCapVideo" /><span>Video</span></label>
+        </div>
+        <div class="section-title">Image API</div>
+        <div class="caps">
+          <label class="switch"><input type="checkbox" v-model="editCapChatCompletions" /><span>chat/completions</span></label>
+          <label class="switch"><input type="checkbox" v-model="editCapImagesGenerations" /><span>images/generations</span></label>
+        </div>
+        <input v-model="editCaps" placeholder="additional capabilities (comma, optional)" />
       </div>
       <div class="actions-row">
         <button class="pill sm" @click="closeEdit">Cancel</button>
@@ -124,7 +143,10 @@ const newBase = ref('')
 const newNotes = ref('')
 const newEnabled = ref(true)
 const capImage = ref(true)
+const capEditImage = ref(false)
 const capVideo = ref(false)
+const capChatCompletions = ref(true)
+const capImagesGenerations = ref(false)
 const modelPresets = ref<string[]>([])
 const newToken = ref('')
 const secretTarget = ref<{ name: string } | null>(null)
@@ -136,6 +158,28 @@ const editBase = ref('')
 const editNotes = ref('')
 const editModels = ref('')
 const editCaps = ref('')
+const editCapImage = ref(false)
+const editCapEditImage = ref(false)
+const editCapVideo = ref(false)
+const editCapChatCompletions = ref(false)
+const editCapImagesGenerations = ref(false)
+
+const capabilityFlags = ['image', 'edit_image', 'video', 'chat-completions', 'images-generations']
+
+const parseExtraCaps = (caps: string[] = []) => caps.filter(c => !capabilityFlags.includes(c)).join(', ')
+
+const buildCapabilities = (options: { image?: boolean; edit_image?: boolean; video?: boolean; chat?: boolean; generations?: boolean; extra?: string }) => {
+  const caps = new Set<string>()
+  if (options.image) caps.add('image')
+  if (options.edit_image) caps.add('edit_image')
+  if (options.video) caps.add('video')
+  if (options.chat) caps.add('chat-completions')
+  if (options.generations) caps.add('images-generations')
+  if (options.extra) {
+    options.extra.split(',').map(s => s.trim()).filter(Boolean).forEach(c => caps.add(c))
+  }
+  return Array.from(caps)
+}
 
 const load = async () => {
   try { providers.value = await get('/providers') } catch { providers.value = [] }
@@ -161,7 +205,14 @@ const remove = async (p: Provider) => {
 
 const create = async () => {
   try {
-    const caps = [capImage.value ? 'image' : null, capVideo.value ? 'video' : null].filter(Boolean)
+    const caps = buildCapabilities({
+      image: capImage.value,
+      edit_image: capEditImage.value,
+      video: capVideo.value,
+      chat: capChatCompletions.value,
+      generations: capImagesGenerations.value,
+      extra: newCaps.value,
+    })
     const modelsInput = newModels.value.split(',').map(s=>s.trim()).filter(Boolean)
     const models = Array.from(new Set([...modelsInput, ...modelPresets.value]))
     await createProvider({ name: newName.value, display_name: newDisplay.value, models, capabilities: caps, base_url: newBase.value || undefined, notes: newNotes.value || undefined, enabled: newEnabled.value })
@@ -169,7 +220,7 @@ const create = async () => {
       try { await patch(`/providers/${newName.value}/secret`, { api_token: newToken.value }) } catch {}
     }
     showCreate.value = false
-    preset.value=''; newName.value=''; newDisplay.value=''; newModels.value=''; newCaps.value=''; newBase.value=''; newNotes.value=''; newEnabled.value=true; capImage.value=true; capVideo.value=false; modelPresets.value=[]; newToken.value=''
+    preset.value=''; newName.value=''; newDisplay.value=''; newModels.value=''; newCaps.value=''; newBase.value=''; newNotes.value=''; newEnabled.value=true; capImage.value=true; capEditImage.value=false; capVideo.value=false; capChatCompletions.value=true; capImagesGenerations.value=false; modelPresets.value=[]; newToken.value=''
     await load()
   } catch {}
 }
@@ -179,7 +230,13 @@ const openEdit = (p: Provider) => {
   editBase.value = p.base_url || ''
   editNotes.value = p.notes || ''
   editModels.value = Array.isArray(p.models) ? p.models.join(', ') : ''
-  editCaps.value = Array.isArray(p.capabilities) ? p.capabilities.join(', ') : ''
+  const caps = Array.isArray(p.capabilities) ? p.capabilities : []
+  editCapImage.value = caps.includes('image')
+  editCapEditImage.value = caps.includes('edit_image')
+  editCapVideo.value = caps.includes('video')
+  editCapChatCompletions.value = caps.includes('chat-completions')
+  editCapImagesGenerations.value = caps.includes('images-generations')
+  editCaps.value = parseExtraCaps(caps)
 }
 
 const closeEdit = () => {
@@ -189,7 +246,15 @@ const closeEdit = () => {
 const saveEdit = async () => {
   if (!editTarget.value) return
   try {
-    await patch(`/providers/${editTarget.value.name}`, { base_url: editBase.value || null, notes: editNotes.value || null, models: editModels.value.split(',').map(s=>s.trim()).filter(Boolean), capabilities: editCaps.value.split(',').map(s=>s.trim()).filter(Boolean) })
+    const caps = buildCapabilities({
+      image: editCapImage.value,
+      edit_image: editCapEditImage.value,
+      video: editCapVideo.value,
+      chat: editCapChatCompletions.value,
+      generations: editCapImagesGenerations.value,
+      extra: editCaps.value,
+    })
+    await patch(`/providers/${editTarget.value.name}`, { base_url: editBase.value || null, notes: editNotes.value || null, models: editModels.value.split(',').map(s=>s.trim()).filter(Boolean), capabilities: caps })
     editTarget.value = null
     await load()
   } catch {}
@@ -201,26 +266,30 @@ watch(preset, (v) => {
     newName.value = 'qwen'
     newDisplay.value = 'Qwen'
     newBase.value = 'https://api-inference.modelscope.cn/'
-    capImage.value = true; capVideo.value = false
+    capImage.value = true; capEditImage.value = true; capVideo.value = false; capChatCompletions.value = true; capImagesGenerations.value = false
     modelPresets.value = ['qwen-image','qwen-image-edit']
+    newCaps.value = ''
   } else if (v === 'flux') {
     newName.value = 'flux'
     newDisplay.value = 'FLUX'
     newBase.value = 'https://api-inference.modelscope.cn/'
-    capImage.value = true; capVideo.value = false
+    capImage.value = true; capEditImage.value = false; capVideo.value = false; capChatCompletions.value = true; capImagesGenerations.value = false
     modelPresets.value = ['MusePublic/489_ckpt_FLUX_1']
+    newCaps.value = ''
   } else if (v === 'majicflus') {
     newName.value = 'majicflus'
     newDisplay.value = 'MajicFLuS'
     newBase.value = 'https://api-inference.modelscope.cn/'
-    capImage.value = true; capVideo.value = false
+    capImage.value = true; capEditImage.value = false; capVideo.value = false; capChatCompletions.value = true; capImagesGenerations.value = false
     modelPresets.value = ['MAILAND/majicflus_v1']
+    newCaps.value = ''
   } else if (v === 'sora2') {
     newName.value = 'sora2'
     newDisplay.value = 'Sora2'
     newBase.value = 'https://sora2api.airgzn.top/'
-    capImage.value = false; capVideo.value = true
+    capImage.value = false; capEditImage.value = false; capVideo.value = true; capChatCompletions.value = false; capImagesGenerations.value = false
     modelPresets.value = ['sora2-video']
+    newCaps.value = ''
   }
 })
 </script>

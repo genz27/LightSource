@@ -65,7 +65,8 @@ async def simulate_generation(
         provider = await get_provider_by_name(session, job.provider) if job.provider else None
     adapter = resolve_adapter(provider) if provider and provider.enabled else None
     provider_caps = {c.lower() for c in (provider.capabilities or [])} if provider else set()
-    if adapter and job.kind == JobKind.TEXT_TO_IMAGE and provider and ("image" in provider_caps or "image-edit" in provider_caps):
+    image_api_style = _image_api_style(provider_caps)
+    if adapter and job.kind == JobKind.TEXT_TO_IMAGE and provider and ("image" in provider_caps or "image-edit" in provider_caps or "edit_image" in provider_caps):
         attempted_external = True
         src_url = None
         try:
@@ -78,8 +79,10 @@ async def simulate_generation(
         except Exception:
             src_urls = None
         primary_image = src_url or (src_urls[0] if isinstance(src_urls, list) and src_urls else None)
-        supports_image_edit = "image-edit" in provider_caps
-        supports_image_url = provider.name in {"sora", "nano-banana-2"} or isinstance(adapter, OpenAIImageAdapter)
+        supports_image_edit = "image-edit" in provider_caps or "edit_image" in provider_caps
+        supports_image_url = provider.name in {"sora", "nano-banana-2"} or (
+            isinstance(adapter, OpenAIImageAdapter) and image_api_style == "chat-completions"
+        )
         use_edit = bool(primary_image) and (
             supports_image_edit or (job.model or "").startswith("qwen-image-edit") or ("edit" in (job.model or ""))
         )
@@ -95,6 +98,7 @@ async def simulate_generation(
                     api_key=provider.api_token,
                     base_url=provider.base_url or "",
                     size=job.params.size,
+                    api_style=image_api_style if isinstance(adapter, OpenAIImageAdapter) else None,
                 )
             )
         elif supports_image_url:
@@ -107,6 +111,7 @@ async def simulate_generation(
                     base_url=provider.base_url or "",
                     size=job.params.size,
                     image_url=primary_image or None,
+                    api_style=image_api_style if isinstance(adapter, OpenAIImageAdapter) else None,
                 )
             )
         else:
@@ -118,6 +123,7 @@ async def simulate_generation(
                     api_key=provider.api_token,
                     base_url=provider.base_url or "",
                     size=job.params.size,
+                    api_style=image_api_style if isinstance(adapter, OpenAIImageAdapter) else None,
                 )
             )
 
@@ -359,6 +365,17 @@ async def simulate_generation(
         metrics.mark_finished(job.id)
 def _valid_url(u: str | None) -> bool:
     return isinstance(u, str) and (u.startswith("http://") or u.startswith("https://"))
+
+
+def _image_api_style(capabilities: set[str]) -> str:
+    """Return preferred image API style for OpenAI-compatible providers."""
+
+    caps = {c.lower() for c in capabilities}
+    if "images-generations" in caps:
+        return "images-generations"
+    if "chat-completions" in caps:
+        return "chat-completions"
+    return "chat-completions"
 
 
 def _select_model(provider_models: list[str], requested: str | None, use_edit: bool) -> str:

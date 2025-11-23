@@ -118,6 +118,54 @@ def _build_edit_content(prompt: str, images: list[str]) -> List[Dict[str, Any]]:
     return parts
 
 
+def _generate_via_images_api(
+    prompt: str,
+    *,
+    model: str | None,
+    api_key: str | None,
+    base_url: str | None,
+    size: str | None,
+    provider_name: str,
+) -> Tuple[str, Dict[str, Any]]:
+    url = _normalize_base_url(base_url)
+    payload: Dict[str, Any] = {"model": model or DEFAULT_MODEL, "prompt": prompt}
+    if size:
+        payload["size"] = size
+
+    response = requests.post(
+        f"{url}v1/images/generations",
+        headers=_headers(api_key),
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        timeout=120,
+    )
+    response.raise_for_status()
+    data = response.json()
+
+    image_out: str | None = None
+    try:
+        choices = data.get("data") or []
+        if isinstance(choices, list) and choices:
+            first = choices[0] or {}
+            url_val = first.get("url")
+            if isinstance(url_val, str):
+                image_out = _clean_url(url_val)
+            elif isinstance(first.get("b64_json"), str):
+                image_out = first.get("b64_json")
+    except Exception:
+        image_out = None
+
+    provider_response: Dict[str, Any] = {
+        "provider": provider_name,
+        "model": payload["model"],
+        "request": payload,
+        "raw": data,
+    }
+
+    if not image_out:
+        raise RuntimeError("provider returned no image URL in response")
+    return image_out, provider_response
+
+
 def generate_image(
     prompt: str,
     *,
@@ -131,7 +179,19 @@ def generate_image(
     top_p: float | None = 1,
     stream_options: dict[str, Any] | None = None,
     stream: bool | None = None,
+    api_style: str | None = None,
 ) -> Tuple[str, Dict[str, Any]]:
+    style = (api_style or "chat-completions").lower()
+    if style == "images-generations":
+        return _generate_via_images_api(
+            prompt,
+            model=model,
+            api_key=api_key,
+            base_url=base_url,
+            size=size,
+            provider_name=provider_name,
+        )
+
     url = _normalize_base_url(base_url)
     stream = bool(image_url) if stream is None else bool(stream)
     payload: Dict[str, Any] = {
@@ -197,7 +257,12 @@ def edit_image(
     temperature: float | None = 1,
     top_p: float | None = 1,
     stream_options: dict[str, Any] | None = None,
+    api_style: str | None = None,
 ) -> Tuple[str, Dict[str, Any]]:
+    style = (api_style or "chat-completions").lower()
+    if style == "images-generations":
+        raise ValueError("image edits are not supported via /v1/images/generations")
+
     urls: list[str] = []
     if isinstance(image_url, list):
         urls = [u for u in image_url if isinstance(u, str) and u]

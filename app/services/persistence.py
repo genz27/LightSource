@@ -318,15 +318,15 @@ async def ensure_default_providers(session: AsyncSession) -> None:
             if "qwen-image-edit" not in models:
                 p.models = models + ["qwen-image-edit"]
             caps = {c.lower() for c in (p.capabilities or [])}
-            if "image-edit" not in caps:
-                p.capabilities = list(caps | {"image", "image-edit"})
+            if "image-edit" not in caps or "edit_image" not in caps:
+                p.capabilities = list(caps | {"image", "image-edit", "edit_image", "images-generations"})
         if p.name == "sora":
             models = p.models or []
             if "sora-image-edit" not in models:
                 p.models = models + ["sora-image-edit"]
             caps = {c.lower() for c in (p.capabilities or [])}
-            if "image-edit" not in caps:
-                p.capabilities = list(caps | {"image", "image-edit"})
+            if "image-edit" not in caps or "edit_image" not in caps:
+                p.capabilities = list(caps | {"image", "image-edit", "edit_image", "chat-completions"})
         if p.name == "nano-banana-2":
             models = p.models or []
             if "gemini-3-pro-image-preview-edit" not in models:
@@ -334,15 +334,15 @@ async def ensure_default_providers(session: AsyncSession) -> None:
             if "gemini-2.5-flash-image" not in models:
                 p.models = models + ["gemini-2.5-flash-image"]
             caps = {c.lower() for c in (p.capabilities or [])}
-            if "image-edit" not in caps:
-                p.capabilities = list(caps | {"image", "image-edit"})
+            if "image-edit" not in caps or "edit_image" not in caps:
+                p.capabilities = list(caps | {"image", "image-edit", "edit_image", "chat-completions"})
         if p.name == "openai":
             models = p.models or []
             if "gpt-image-1-edit" not in models:
                 p.models = models + ["gpt-image-1-edit"]
             caps = {c.lower() for c in (p.capabilities or [])}
-            if "image-edit" not in caps:
-                p.capabilities = list(caps | {"image", "image-edit"})
+            if "image-edit" not in caps or "edit_image" not in caps:
+                p.capabilities = list(caps | {"image", "image-edit", "edit_image", "chat-completions"})
     await session.commit()
 
 
@@ -379,7 +379,7 @@ async def update_provider_db(
     if capabilities is not None:
         try:
             caps = [str(c).strip().lower() for c in (capabilities or []) if str(c).strip()]
-            allowed = {"image", "image-edit", "video"}
+            allowed = {"image", "image-edit", "edit_image", "video", "chat-completions", "images-generations"}
             provider.capabilities = [c for c in caps if c in allowed]
         except Exception:
             provider.capabilities = provider.capabilities or []
