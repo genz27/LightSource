@@ -16,7 +16,7 @@ from app.services.persistence import (
 )
 from app.services.storage import placeholder_output
 from app.services.store import MemoryStore
-from app.interface.registry import resolve_adapter
+from app.interface.registry import OpenAIImageAdapter, resolve_adapter
 from app.services.metrics import metrics
 
 
@@ -63,8 +63,9 @@ async def simulate_generation(
     attempted_external = False
     async with SessionLocal() as session:
         provider = await get_provider_by_name(session, job.provider) if job.provider else None
-    adapter = resolve_adapter(provider.name) if provider and provider.enabled else None
-    if adapter and job.kind == JobKind.TEXT_TO_IMAGE and provider:
+    adapter = resolve_adapter(provider) if provider and provider.enabled else None
+    provider_caps = {c.lower() for c in (provider.capabilities or [])} if provider else set()
+    if adapter and job.kind == JobKind.TEXT_TO_IMAGE and provider and ("image" in provider_caps or "image-edit" in provider_caps):
         attempted_external = True
         src_url = None
         try:
@@ -77,25 +78,31 @@ async def simulate_generation(
         except Exception:
             src_urls = None
         primary_image = src_url or (src_urls[0] if isinstance(src_urls, list) and src_urls else None)
-        use_edit = bool(primary_image) and ((job.model or "").startswith("qwen-image-edit") or ("edit" in (job.model or "")))
-        if use_edit:
+        supports_image_edit = "image-edit" in provider_caps
+        supports_image_url = provider.name in {"sora", "nano-banana-2"} or isinstance(adapter, OpenAIImageAdapter)
+        use_edit = bool(primary_image) and (
+            supports_image_edit or (job.model or "").startswith("qwen-image-edit") or ("edit" in (job.model or ""))
+        )
+        model_to_use = _select_model(provider.models or [], job.model, use_edit)
+
+        if use_edit and hasattr(adapter, "edit_image"):
             qwen_task = asyncio.create_task(
                 asyncio.to_thread(
                     adapter.edit_image,
                     src_urls if isinstance(src_urls, list) and src_urls else (src_url or ""),
                     job.prompt,
-                    model=job.model or "qwen-image-edit",
+                    model=model_to_use,
                     api_key=provider.api_token,
                     base_url=provider.base_url or "",
                     size=job.params.size,
                 )
             )
-        elif provider.name in {"sora", "nano-banana-2"}:
+        elif supports_image_url:
             qwen_task = asyncio.create_task(
                 asyncio.to_thread(
                     adapter.generate_image,
                     job.prompt,
-                    model=job.model or ("sora-image" if provider.name == "sora" else "gemini-3-pro-image-preview"),
+                    model=model_to_use,
                     api_key=provider.api_token,
                     base_url=provider.base_url or "",
                     size=job.params.size,
@@ -107,7 +114,7 @@ async def simulate_generation(
                 asyncio.to_thread(
                     adapter.generate_image,
                     job.prompt,
-                    model=job.model or ((provider.models or ["qwen-image"])[0]),
+                    model=model_to_use,
                     api_key=provider.api_token,
                     base_url=provider.base_url or "",
                     size=job.params.size,
@@ -352,4 +359,42 @@ async def simulate_generation(
         metrics.mark_finished(job.id)
 def _valid_url(u: str | None) -> bool:
     return isinstance(u, str) and (u.startswith("http://") or u.startswith("https://"))
+
+
+def _select_model(provider_models: list[str], requested: str | None, use_edit: bool) -> str:
+    """Pick a provider model that matches the intended flow (generate vs edit).
+
+    - If the caller requested a model, prefer it unless it mismatches the flow and
+      a better-suited model exists in the provider list.
+    - Otherwise, choose the first matching model by capability (edit vs generate),
+      falling back to the provider's first declared model.
+    """
+
+    requested = (requested or "").strip()
+    if requested:
+        req_lower = requested.lower()
+        wants_edit = "edit" in req_lower
+        if use_edit and not wants_edit:
+            alt = _first_model(provider_models, want_edit=True)
+            if alt:
+                return alt
+        if not use_edit and wants_edit:
+            alt = _first_model(provider_models, want_edit=False)
+            if alt:
+                return alt
+        return requested
+
+    fallback = _first_model(provider_models, want_edit=use_edit)
+    return fallback or (provider_models[0] if provider_models else "")
+
+
+def _first_model(models: list[str], *, want_edit: bool) -> str | None:
+    for model in models:
+        model_lower = model.lower()
+        has_edit = "edit" in model_lower
+        if want_edit and has_edit:
+            return model
+        if not want_edit and not has_edit:
+            return model
+    return None
 

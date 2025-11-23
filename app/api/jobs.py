@@ -554,7 +554,7 @@ def _infer_provider(model: str | None) -> str | None:
         return "sora"
     if "sora" in m:
         return "sora2"
-    if "nano" in m or "gemini-3-pro-image-preview" in m:
+    if "nano" in m or "gemini-3-pro-image-preview" in m or "gemini-2.5-flash-image" in m:
         return "nano-banana-2"
     if "qwen" in m:
         return "qwen"
@@ -578,6 +578,7 @@ def _validate_model_kind(kind: JobKind, model: str | None) -> None:
             "sora-image-landscape",
             "sora-image-portrait",
             "gemini-3-pro-image-preview",
+            "gemini-2.5-flash-image",
         },
         JobKind.TEXT_TO_VIDEO: {"sora2-video"},
         JobKind.IMAGE_TO_VIDEO: {"sora2-video"},
