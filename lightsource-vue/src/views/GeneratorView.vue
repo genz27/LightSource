@@ -346,22 +346,29 @@ const normalizeStatus = (status: string) => {
 }
 
 const pollStatus = async (jobId: string) => {
-  if (pollTimers[jobId]) { clearInterval(pollTimers[jobId]); delete pollTimers[jobId] }
-  pollTimers[jobId] = window.setInterval(async () => {
+  const POLL_INTERVAL_MS = 5000
+  if (pollTimers[jobId]) { clearTimeout(pollTimers[jobId]); delete pollTimers[jobId] }
+
+  const tick = async () => {
     try {
       const s = await get(`/jobs/${jobId}/status`)
       const idx = tasks.value.findIndex(t => t.id === jobId)
       if (idx > -1) { const t = tasks.value[idx]; if (t) { t.status = normalizeStatus(s.status); t.progress = s.progress } }
       if (s.status === 'completed' || s.status === 'failed' || s.status === 'canceled') {
-        if (pollTimers[jobId]) { clearInterval(pollTimers[jobId]); delete pollTimers[jobId] }
+        if (pollTimers[jobId]) { clearTimeout(pollTimers[jobId]); delete pollTimers[jobId] }
         if (s.status === 'completed') { await loadResult(jobId) }
         try { const idx2 = tasks.value.findIndex(t => t.id === jobId); if (idx2 > -1) tasks.value.splice(idx2, 1) } catch {}
+        return
       }
     } catch {
-      if (pollTimers[jobId]) { clearInterval(pollTimers[jobId]); delete pollTimers[jobId] }
+      if (pollTimers[jobId]) { clearTimeout(pollTimers[jobId]); delete pollTimers[jobId] }
       try { const idx2 = tasks.value.findIndex(t => t.id === jobId); if (idx2 > -1) tasks.value.splice(idx2, 1) } catch {}
+      return
     }
-  }, 1500)
+    pollTimers[jobId] = window.setTimeout(tick, POLL_INTERVAL_MS)
+  }
+
+  pollTimers[jobId] = window.setTimeout(tick, POLL_INTERVAL_MS)
 }
 
 const loadResult = async (jobId: string) => {
