@@ -157,6 +157,7 @@ async def get_job_status(
     except Exception:
         runtime_job = mem_job or job
     extras = getattr(job.params, "extras", {}) or {}
+    error_detail = extras.get("error_detail")
     provider_resp_existing = extras.get("provider_response") or {}
     provider_raw_existing = provider_resp_existing.get("raw") or {}
     vendor_video_id = provider_raw_existing.get("video_id") or None
@@ -366,7 +367,7 @@ async def get_job_status(
             "image_provided": bool(extras.get("source_image_url")),
             "result_url": result_url,
             "video_url": result_url,
-            "error_message": provider_error_message or job.error,
+            "error_message": error_detail or provider_error_message or job.error,
             "created_at": provider_created_at or (job.created_at.isoformat() + "Z"),
             "updated_at": provider_updated_at or (job.updated_at.isoformat() + "Z"),
         }
@@ -386,7 +387,8 @@ async def get_job_status(
             "prompt": job.prompt,
             "result_url": result_url,
             "image_url": result_url,
-            "error_message": job.error,
+            "error_message": error_detail or job.error,
+            "error_detail": error_detail,
             "created_at": job.created_at.isoformat() + "Z",
             "updated_at": job.updated_at.isoformat() + "Z",
         }
@@ -416,7 +418,7 @@ async def get_jobs_status(
                 status=job.status,
                 progress=job.progress,
                 asset_id=job.asset_id,
-                error=job.error,
+                error=getattr(job.params, "extras", {}).get("error_detail") or job.error,
                 updated_at=job.updated_at,
             )
         )

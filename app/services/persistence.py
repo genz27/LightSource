@@ -99,21 +99,16 @@ async def update_job_fields(session: AsyncSession, job_id: str, **fields) -> Non
     for key, value in fields.items():
         if key == "error":
             try:
-                if isinstance(value, str):
-                    if len(value) > 255:
-                        job.error = value[:255]
-                        try:
-                            params = dict(job.params or {})
-                            extras = dict(params.get("extras") or {})
-                            extras["error_detail"] = value
-                            params["extras"] = extras
-                            job.params = params
-                        except Exception:
-                            pass
-                    else:
-                        job.error = value
-                else:
-                    job.error = str(value)
+                full_error = value if isinstance(value, str) else str(value)
+                job.error = full_error[:255] if isinstance(full_error, str) and len(full_error) > 255 else full_error
+                try:
+                    params = dict(job.params or {})
+                    extras = dict(params.get("extras") or {})
+                    extras["error_detail"] = full_error
+                    params["extras"] = extras
+                    job.params = params
+                except Exception:
+                    pass
             except Exception:
                 job.error = "provider_error"
             continue
