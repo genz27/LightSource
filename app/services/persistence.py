@@ -379,7 +379,7 @@ async def update_provider_db(
     if capabilities is not None:
         try:
             caps = [str(c).strip().lower() for c in (capabilities or []) if str(c).strip()]
-            allowed = {"image", "image-edit", "edit_image", "video", "chat-completions", "images-generations"}
+            allowed = {"image", "image-edit", "edit_image", "video", "image-video", "chat-completions", "images-generations"}
             provider.capabilities = [c for c in caps if c in allowed]
         except Exception:
             provider.capabilities = provider.capabilities or []

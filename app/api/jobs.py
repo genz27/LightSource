@@ -566,29 +566,8 @@ def _infer_provider(model: str | None) -> str | None:
 
 
 def _validate_model_kind(kind: JobKind, model: str | None) -> None:
-    if model is None:
-        return
-    pairs = {
-        JobKind.TEXT_TO_IMAGE: {
-            "qwen-image",
-            "qwen-image-edit",
-            "MusePublic/489_ckpt_FLUX_1",
-            "MAILAND/majicflus_v1",
-            "sora-image",
-            "sora-image-landscape",
-            "sora-image-portrait",
-            "gemini-3-pro-image-preview",
-            "gemini-2.5-flash-image",
-        },
-        JobKind.TEXT_TO_VIDEO: {"sora2-video"},
-        JobKind.IMAGE_TO_VIDEO: {"sora2-video"},
-    }
-    allowed = pairs.get(kind, set())
-    if allowed and model not in allowed:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Model '{model}' is not valid for kind '{kind.value}'",
-        )
+    # Accept all model strings; provider selection is driven by channel capabilities.
+    return
 
 
 def _validate_required_orientation(kind: JobKind, orientation: Orientation | None) -> None:
