@@ -2,17 +2,11 @@ from __future__ import annotations
 
 from typing import Any, Tuple
 
-from app.interface import flux as flux_client
 from app.interface import majicflus as majicflus_client
 from app.interface import nano_banana as nano_banana_client
 from app.interface import openai_image as openai_image_client
 from app.interface import sora2 as sora2_client
 from app.interface import sora_image as sora_image_client
-
-
-class FluxAdapter:
-    def generate_image(self, prompt: str, *, model: str, api_key: str, base_url: str, size: str | None = None) -> Tuple[str, dict]:
-        return flux_client.generate_image(prompt, api_key=api_key, base_url=base_url, size=size)
 
 
 class MajicFlusAdapter:
@@ -273,8 +267,6 @@ def resolve_adapter(provider) -> Any | None:
         return Sora2Adapter()
     if name == "sora":
         return SoraImageAdapter()
-    if name == "flux":
-        return FluxAdapter()
     if name == "majicflus":
         return MajicFlusAdapter()
     if name == "nano-banana-2":

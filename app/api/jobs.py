@@ -560,8 +560,6 @@ def _infer_provider(model: str | None) -> str | None:
         return "nano-banana-2"
     if "gpt-image" in m or "dall-e" in m or "openai" in m:
         return "openai"
-    if "flux" in m or "musepublic" in m:
-        return "flux"
     if "majicflus" in m or "mailand" in m:
         return "majicflus"
     return None

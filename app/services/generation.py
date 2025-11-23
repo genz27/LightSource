@@ -15,7 +15,7 @@ from app.services.persistence import (
     update_job_fields,
     get_provider_by_name,
 )
-from app.services.storage import placeholder_output
+from app.services.storage import placeholder_output, save_data_url_image
 from app.services.store import MemoryStore
 from app.interface.registry import OpenAIImageAdapter, resolve_adapter
 from app.services.metrics import metrics
@@ -291,6 +291,11 @@ async def simulate_generation(
             await update_job_fields(session, job.id, params=params.dict() if hasattr(params, "dict") else params)
 
         normalized_url = _normalize_output_url(image_url)
+        if normalized_url and normalized_url.startswith("data:image/"):
+            try:
+                normalized_url = save_data_url_image(job.id, normalized_url)
+            except Exception:
+                pass
 
         if attempted_external and not normalized_url:
             err_payload = provider_response
