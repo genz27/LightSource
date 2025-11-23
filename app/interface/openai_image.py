@@ -25,8 +25,24 @@ def _normalize_base_url(url: str | None) -> str:
     return url if url.endswith("/") else url + "/"
 
 
+_DATA_URL_RE = re.compile(r"data:image/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\r\n]+")
+_HTTP_URL_RE = re.compile(r"https?://\S+")
+
+
 def _clean_url(url_val: str) -> str:
     return url_val.rstrip(")].>,\"'")
+
+
+def _find_media_url(text: str) -> str | None:
+    if not isinstance(text, str):
+        return None
+    data_match = _DATA_URL_RE.search(text)
+    if data_match:
+        return _clean_url(data_match.group(0))
+    http_match = _HTTP_URL_RE.search(text)
+    if http_match:
+        return _clean_url(http_match.group(0))
+    return None
 
 
 def _extract_url_from_parts(parts: Iterable[Any]) -> str | None:
@@ -43,10 +59,9 @@ def _extract_url_from_parts(parts: Iterable[Any]) -> str | None:
                 return _clean_url(image_entry)
         if part.get("type") == "text":
             text = part.get("text")
-            if isinstance(text, str):
-                match = re.search(r"https?://\S+", text)
-                if match:
-                    return _clean_url(match.group(0))
+            url_val = _find_media_url(text)
+            if url_val:
+                return url_val
     return None
 
 
@@ -57,9 +72,9 @@ def _extract_image_url(message: dict[str, Any]) -> str:
         if url_val:
             return _clean_url(url_val)
     if isinstance(content, str):
-        match = re.search(r"https?://\S+", content)
-        if match:
-            return _clean_url(match.group(0))
+        url_val = _find_media_url(content)
+        if url_val:
+            return _clean_url(url_val)
     raise RuntimeError("provider returned no image URL in message content")
 
 
@@ -78,9 +93,9 @@ def _extract_from_stream(resp: requests.Response) -> Tuple[str | None, list[dict
         try:
             obj = json.loads(payload)
         except Exception:
-            match = re.search(r"https?://\S+", payload)
-            if match:
-                last_url = _clean_url(match.group(0))
+            url_val = _find_media_url(payload)
+            if url_val:
+                last_url = url_val
             continue
         if isinstance(obj, dict):
             chunks.append(obj)
@@ -95,9 +110,9 @@ def _extract_from_stream(resp: requests.Response) -> Tuple[str | None, list[dict
                     last_url = url_val
                     break
             if isinstance(content, str):
-                match = re.search(r"https?://\S+", content)
-                if match:
-                    last_url = _clean_url(match.group(0))
+                url_val = _find_media_url(content)
+                if url_val:
+                    last_url = url_val
                     break
     return last_url, chunks
 
