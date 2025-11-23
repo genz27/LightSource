@@ -35,11 +35,11 @@
 
           <div class="form-group">
             <label>Model</label>
-            <select v-if="isImageMode" v-model="form.model">
-              <option v-for="m in availableModels" :key="m" :value="m">{{ m }}</option>
-            </select>
-            <select v-else v-model="form.model">
-              <option v-for="m in videoModels" :key="m" :value="m">{{ m }}</option>
+            <select v-model="selectedModelKey">
+              <option v-for="opt in currentModelOptions" :key="opt.key" :value="opt.key">
+                {{ opt.model }} · {{ opt.displayName }}<span v-if="opt.tags.length"> ({{ opt.tags.join(' / ') }})</span>
+              </option>
+              <option v-if="!currentModelOptions.length" disabled>No models available</option>
             </select>
           </div>
 
@@ -276,6 +276,17 @@ const form = reactive<GenerationForm>({
 })
 
 interface ProviderInfo { name: string; display_name?: string; models: string[]; capabilities: string[]; enabled: boolean; notes?: string; base_url?: string }
+interface ModelOption {
+  key: string
+  model: string
+  provider: string
+  displayName: string
+  supportsImage: boolean
+  supportsEdit: boolean
+  supportsVideo: boolean
+  supportsImageVideo: boolean
+  tags: string[]
+}
 const providers = ref<ProviderInfo[]>([])
 const walletBalance = ref<number | null>(null)
 const prices = ref<Record<string, number>>({ text_to_image: 5.0, text_to_video: 20.0, image_to_video: 12.0 })
@@ -283,29 +294,105 @@ const estimatedCost = computed<number>(() => {
   const kind = form.mode === 'image_to_image' ? 'image_to_image' : form.mode
   return prices.value[kind as keyof typeof prices.value] || 0
 })
-const availableModels = computed<string[]>(() => {
-  const p = providers.value
-  const models: string[] = []
-  const wantImage = form.mode === 'text_to_image' || form.mode === 'image_to_image'
-  const wantVideo = form.mode === 'text_to_video' || form.mode === 'image_to_video'
-  for (const item of p) {
-    if (wantImage && item.capabilities.includes('image')) {
-      for (const m of item.models || []) models.push(m)
+const modelOptions = computed<ModelOption[]>(() => {
+  const options: ModelOption[] = []
+  for (const p of providers.value) {
+    const caps = new Set((p.capabilities || []).map(c => c.toLowerCase()))
+    const supportsImage = caps.has('image')
+    const supportsEdit = caps.has('image-edit') || caps.has('edit_image')
+    const supportsVideo = caps.has('video')
+    const supportsImageVideo = caps.has('image-video')
+    for (const model of p.models || []) {
+      const tags: string[] = []
+      if (supportsImage) tags.push('image')
+      if (supportsEdit) tags.push('image-edit')
+      if (supportsVideo) tags.push('video')
+      if (supportsImageVideo) tags.push('image-video')
+      options.push({
+        key: `${p.name}:${model}`,
+        model,
+        provider: p.name,
+        displayName: p.display_name || p.name,
+        supportsImage,
+        supportsEdit,
+        supportsVideo,
+        supportsImageVideo,
+        tags,
+      })
     }
-    if (wantVideo && item.capabilities.includes('video')) {
-      for (const m of item.models || []) models.push(m)
-    }
   }
-  const unique = Array.from(new Set(models))
-  if (form.mode === 'text_to_image') {
-    return unique.filter(m => !m.includes('edit')).length ? unique.filter(m => !m.includes('edit')) : ['qwen-image']
-  }
-  if (form.mode === 'image_to_image') {
-    const edits = unique.filter(m => m.toLowerCase().includes('edit'))
-    return edits.length ? edits : ['qwen-image-edit']
-  }
-  return unique.length ? unique : ['sora2-video']
+  return options
 })
+
+const modelOptionMap = computed<Record<string, ModelOption>>(() => {
+  const m: Record<string, ModelOption> = {}
+  modelOptions.value.forEach(o => { m[o.key] = o })
+  return m
+})
+
+const imageGenOptions = computed<ModelOption[]>(() => modelOptions.value.filter(o => o.supportsImage))
+const imageEditOptions = computed<ModelOption[]>(() => {
+  const editList = modelOptions.value.filter(o => o.supportsEdit)
+  return editList.length ? editList : imageGenOptions.value
+})
+const textVideoOptions = computed<ModelOption[]>(() => modelOptions.value.filter(o => o.supportsVideo))
+const imageVideoOptions = computed<ModelOption[]>(() => {
+  const opts = modelOptions.value.filter(o => o.supportsImageVideo || o.supportsVideo)
+  return opts
+})
+
+const currentModelOptions = computed<ModelOption[]>(() => {
+  if (form.mode === 'text_to_image') return imageGenOptions.value
+  if (form.mode === 'image_to_image') return imageEditOptions.value
+  if (form.mode === 'image_to_video') return imageVideoOptions.value
+  if (form.mode === 'text_to_video') return textVideoOptions.value
+  return []
+})
+
+const selectedModelKey = ref('')
+const selectedModelOption = computed<ModelOption | null>(() => modelOptionMap.value[selectedModelKey.value] || null)
+const selectedProvider = ref<string | null>(null)
+
+const syncOrientationFromModel = (modelName: string) => {
+  const m = modelName.toLowerCase()
+  const parsedOrientation = m.includes('portrait') ? 'portrait' : (m.includes('landscape') ? 'landscape' : form.orientation)
+  if (parsedOrientation && form.orientation !== parsedOrientation) form.orientation = parsedOrientation as 'landscape' | 'portrait'
+}
+
+const applySelection = (opt: ModelOption | null | undefined) => {
+  form.model = opt?.model || ''
+  selectedProvider.value = opt?.provider || null
+  if (isVideoMode.value && opt?.model) {
+    syncOrientationFromModel(opt.model)
+  }
+}
+
+const ensureSelectionForMode = () => {
+  const opts = currentModelOptions.value
+  if (!opts.length) {
+    selectedModelKey.value = ''
+    applySelection(null)
+    return
+  }
+  const first = opts[0]
+  if (!opts.some(o => o.key === selectedModelKey.value)) {
+    selectedModelKey.value = first ? first.key : ''
+    applySelection(first)
+    return
+  }
+  applySelection(modelOptionMap.value[selectedModelKey.value])
+}
+
+const syncSelectionByModelName = (modelName: string) => {
+  const match = modelOptions.value.find(o => o.model === modelName) || currentModelOptions.value[0]
+  if (match) {
+    selectedModelKey.value = match.key
+    applySelection(match)
+  }
+}
+
+watch(currentModelOptions, ensureSelectionForMode)
+watch(selectedModelKey, (key) => applySelection(modelOptionMap.value[key]))
 
 const results = ref<GenerationResult[]>([])
 const jobModelMap = ref<Record<string, string>>({})
@@ -320,18 +407,10 @@ const sourceImagePreview = ref<string | null>(null)
 const sourceImageText = ref<string>('')
 const sourceImageFile = ref<File | null>(null)
 const sourceImageFiles = ref<File[]>([])
-  const sourceFilePreviews = ref<string[]>([])
-  const dropActive = ref(false)
-  
-  const isVideoMode = computed(() => form.mode === 'text_to_video' || form.mode === 'image_to_video')
-  const videoModels = computed<string[]>(() => [
-    'sora-video-10s',
-    'sora-video-15s',
-    'sora-video-landscape-10s',
-    'sora-video-landscape-15s',
-    'sora-video-portrait-10s',
-    'sora-video-portrait-15s',
-  ])
+const sourceFilePreviews = ref<string[]>([])
+const dropActive = ref(false)
+
+const isVideoMode = computed(() => form.mode === 'text_to_video' || form.mode === 'image_to_video')
 
 const handleImageError = (event: Event) => {
   const target = event.target as HTMLImageElement
@@ -544,6 +623,12 @@ watch(sourceImageText, (val) => { const v = (val || '').trim(); sourceImagePrevi
 
 const generateContent = async () => {
   try {
+    const activeModel = selectedModelOption.value?.model || form.model
+    const activeProvider = selectedProvider.value
+    if (!activeModel) {
+      alert('Please configure at least one provider/model before generating.')
+      return
+    }
     if (isImageMode.value) {
       const parts = (form.size || '').split('x')
       if (parts.length === 2) {
@@ -565,19 +650,19 @@ const generateContent = async () => {
       const w = await get('/billing/wallet') as { balance: number }
       walletBalance.value = typeof w?.balance === 'number' ? w.balance : walletBalance.value
       const isVideoKind = (form.mode === 'text_to_video') || (form.mode === 'image_to_video')
-      const isEditKind = (form.mode === 'image_to_image') && (String(form.model || '').includes('edit'))
+      const isEditKind = (form.mode === 'image_to_image') && !!selectedModelOption.value?.supportsEdit
       if (typeof w?.balance === 'number' && (isVideoKind || isEditKind) && w.balance < requiredTotal) {
         alert('Insufficient balance. Cannot generate content.')
         return
       }
     } catch {}
     const hasSource = ((sourceImageText.value || '').trim().length > 0) || (sourceImageFiles.value.length > 0)
-    if (form.mode === 'image_to_image' && (form.model || '').includes('edit') && !hasSource) {
-      form.mode = 'text_to_image'
-      form.model = availableModels.value[0] || 'qwen-image'
+    if (form.mode === 'image_to_image' && !hasSource) {
+      alert('Source image required for image-to-image requests.')
+      return
     }
-    
-    if (form.mode === 'image_to_image' && (form.model || '').includes('edit')) {
+
+    if (form.mode === 'image_to_image') {
       if (!sourceImageText.value && sourceImageFiles.value.length === 0) throw new Error('source image required')
       const textVal = (sourceImageText.value || '').trim()
       const urls: string[] = []
@@ -592,7 +677,8 @@ const generateContent = async () => {
         if (parsed.length === 0) throw new Error('Qwen Image Edit requires accessible URL(s)')
         urls.push(...parsed)
       }
-      const payload: Record<string, unknown> = { model: form.model || (availableModels.value[0] ?? 'qwen-image-edit'), prompt: form.prompt, size: form.size }
+      const payload: Record<string, unknown> = { model: activeModel, prompt: form.prompt, size: form.size }
+      if (activeProvider) payload.provider = activeProvider
       if (urls.length > 1) payload.images = urls
       else payload.image = urls[0]
       for (let i = 0; i < n; i++) {
@@ -612,7 +698,7 @@ const generateContent = async () => {
       
     } else if (form.mode === 'image_to_video') {
       if (!sourceImageText.value) throw new Error('source image required')
-      const modelName = form.model || (videoModels.value[0] || 'sora-video-10s')
+      const modelName = activeModel
       const payload: Record<string, unknown> = { model: modelName, prompt: form.prompt, image: sourceImageText.value }
       for (let i = 0; i < n; i++) {
         const res = await post('/v1/videos', payload)
@@ -630,7 +716,7 @@ const generateContent = async () => {
       }
       
     } else if (form.mode === 'text_to_video') {
-      const modelName = form.model || (videoModels.value[0] || 'sora-video-10s')
+      const modelName = activeModel
       const payload: Record<string, unknown> = { model: modelName, prompt: form.prompt }
       for (let i = 0; i < n; i++) {
         const res = await post('/v1/videos', payload)
@@ -651,7 +737,8 @@ const generateContent = async () => {
       const fd = new FormData()
       fd.append('prompt', form.prompt)
       fd.append('kind', form.mode)
-      fd.append('model', form.model || (availableModels.value[0] ?? 'qwen-image'))
+      fd.append('model', activeModel)
+      if (activeProvider) fd.append('provider', activeProvider)
       fd.append('is_public', 'true')
       if (isImageMode.value) {
         fd.append('size', form.size)
@@ -694,7 +781,7 @@ const cancelTask = async (jid: string) => {
 const resetForm = () => {
   form.prompt = ''
   form.mode = 'text_to_image'
-  form.model = availableModels.value[0] || 'qwen-image'
+  ensureSelectionForMode()
   form.size = '1024x1024'
   form.seed = null
   form.style = ''
@@ -708,7 +795,7 @@ const downloadMedia = (result: GenerationResult) => { const link = document.crea
 
 const regenerate = (result: GenerationResult) => {
   form.prompt = result.prompt
-  form.model = result.model
+  syncSelectionByModelName(result.model)
   form.size = result.size
   form.seed = result.seed
   form.style = result.style || ''
@@ -780,7 +867,7 @@ onMounted(async () => {
   try { providers.value = await get('/providers') } catch {}
   try { const w = await get('/billing/wallet') as { balance: number }; walletBalance.value = typeof w?.balance === 'number' ? w.balance : null } catch {}
   try { const p = await get('/billing/prices') as Record<string, number>; if (p && typeof p === 'object') prices.value = p } catch {}
-  form.model = availableModels.value[0] || 'qwen-image'
+  ensureSelectionForMode()
   await hydrateActiveTasks()
   try {
     const url = sessionStorage.getItem('generator_source_url') || ''
@@ -842,14 +929,7 @@ onMounted(async () => {
 })
 
 watch(() => form.mode, () => {
-  form.model = isImageMode.value ? (availableModels.value[0] || 'qwen-image') : (videoModels.value[0] || 'sora-video-landscape-10s')
-})
-
-watch(() => form.model, (val) => {
-  if (!isVideoMode.value) return
-  const m = String(val || '').toLowerCase()
-  const parsedOrientation = m.includes('portrait') ? 'portrait' : (m.includes('landscape') ? 'landscape' : form.orientation)
-  if (parsedOrientation && form.orientation !== parsedOrientation) form.orientation = parsedOrientation as 'landscape' | 'portrait'
+  ensureSelectionForMode()
 })
 
 

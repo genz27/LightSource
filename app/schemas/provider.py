@@ -8,6 +8,11 @@ from pydantic import BaseModel
 
 class Capability(str, Enum):
     IMAGE = "image"
+    IMAGE_EDIT = "image-edit"
+    EDIT_IMAGE = "edit_image"
+    IMAGE_VIDEO = "image-video"
+    CHAT_COMPLETIONS = "chat-completions"
+    IMAGES_GENERATIONS = "images-generations"
     VIDEO = "video"
 
 
