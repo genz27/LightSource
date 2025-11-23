@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, Tuple
 
 from app.interface import majicflus as majicflus_client
-from app.interface import nano_banana as nano_banana_client
 from app.interface import openai_image as openai_image_client
 from app.interface import sora2 as sora2_client
 from app.interface import sora_image as sora_image_client
@@ -14,25 +13,6 @@ class MajicFlusAdapter:
         return majicflus_client.generate_image(prompt, api_key=api_key, base_url=base_url, size=size)
 
 
-class NanoBananaAdapter:
-    def generate_image(
-        self,
-        prompt: str,
-        *,
-        model: str,
-        api_key: str | None,
-        base_url: str,
-        size: str | None = None,
-        image_url: str | None = None,
-    ) -> Tuple[str, dict]:
-        return nano_banana_client.generate_image(
-            prompt,
-            model=model,
-            api_key=api_key,
-            base_url=base_url,
-            size=size,
-            image_url=image_url,
-        )
 
 
 class OpenAIImageAdapter:
@@ -270,7 +250,7 @@ def resolve_adapter(provider) -> Any | None:
     if name == "majicflus":
         return MajicFlusAdapter()
     if name == "nano-banana-2":
-        return NanoBananaAdapter()
+        return OpenAIImageAdapter(name)
     if "image" in capabilities or "image-edit" in capabilities or "edit_image" in capabilities:
         return OpenAIImageAdapter(name)
     return None

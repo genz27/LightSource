@@ -392,6 +392,9 @@ async def get_job_status(
             "created_at": job.created_at.isoformat() + "Z",
             "updated_at": job.updated_at.isoformat() + "Z",
         }
+        if debug:
+            if isinstance(raw, dict) and raw.get("debug"):
+                payload["provider_debug"] = raw.get("debug")
         return JSONResponse(content=payload, headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
 
 

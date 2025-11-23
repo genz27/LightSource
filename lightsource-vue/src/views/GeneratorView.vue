@@ -36,14 +36,12 @@
           <div class="form-group">
             <label>Model</label>
             <select v-model="selectedModelKey">
-              <option v-for="opt in currentModelOptions" :key="opt.key" :value="opt.key">
-                {{ opt.model }} · {{ opt.displayName }}<span v-if="opt.tags.length"> ({{ opt.tags.join(' / ') }})</span>
-              </option>
+              <option v-for="opt in currentModelOptions" :key="opt.key" :value="opt.key">{{ opt.displayName }}</option>
               <option v-if="!currentModelOptions.length" disabled>No models available</option>
             </select>
           </div>
 
-          <div class="form-group">
+          <div class="form-group" v-if="false">
             <label>Count</label>
             <input 
               type="number" 
@@ -56,7 +54,7 @@
           </div>
 
           <div class="form-row">
-            <div class="form-group" v-if="isImageMode">
+            <div class="form-group" v-if="false">
               <label>Size</label>
               <select v-model="form.size">
                 <option value="768x768">Square (768x768)</option>
@@ -74,7 +72,7 @@
               </select>
             </div>
 
-            <div class="form-group" v-if="isImageMode">
+            <div class="form-group" v-if="false">
               <label>Seed</label>
               <input 
                 type="number" 
@@ -87,7 +85,7 @@
             </div>
           </div>
 
-          <div class="form-group" v-if="isImageMode">
+          <div class="form-group" v-if="false">
             <label>Style (Optional)</label>
             <input 
               v-model="form.style" 
@@ -643,8 +641,7 @@ const generateContent = async () => {
     }
     const kindForPrice = form.mode === 'image_to_image' ? 'image_to_image' : form.mode
     const required = Number((prices.value as Record<string, number>)[kindForPrice]) || 0
-    const nRaw = Number(form.count)
-    const n = Number.isFinite(nRaw) ? Math.max(1, Math.min(5, Math.floor(nRaw))) : 1
+    const n = 1
     const requiredTotal = required * n
     try {
       const w = await get('/billing/wallet') as { balance: number }
@@ -677,7 +674,7 @@ const generateContent = async () => {
         if (parsed.length === 0) throw new Error('Qwen Image Edit requires accessible URL(s)')
         urls.push(...parsed)
       }
-      const payload: Record<string, unknown> = { model: activeModel, prompt: form.prompt, size: form.size }
+      const payload: Record<string, unknown> = { model: activeModel, prompt: form.prompt }
       if (activeProvider) payload.provider = activeProvider
       if (urls.length > 1) payload.images = urls
       else payload.image = urls[0]
@@ -740,11 +737,6 @@ const generateContent = async () => {
       fd.append('model', activeModel)
       if (activeProvider) fd.append('provider', activeProvider)
       fd.append('is_public', 'true')
-      if (isImageMode.value) {
-        fd.append('size', form.size)
-        fd.append('style', form.style || '')
-        if (form.seed !== null && !Number.isNaN(form.seed)) fd.append('seed', String(form.seed))
-      }
       for (let i = 0; i < n; i++) {
         const job = await post('/jobs', fd)
         try {
