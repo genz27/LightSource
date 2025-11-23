@@ -89,7 +89,7 @@ async def test_provider(
     url = base if base.endswith("/") else base + "/"
     start = time.time()
     try:
-        if name in ("qwen", "flux", "majicflus"):
+        if name == "majicflus":
             resp = requests.get(url + "v1/models", headers={"Authorization": f"Bearer {provider.api_token}"} if provider.api_token else {}, timeout=10)
             ok = resp.status_code in (200, 401, 403)
         elif name == "sora2":

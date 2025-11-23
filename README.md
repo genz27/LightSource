@@ -21,7 +21,6 @@
 ## 接口层（Providers）
 - 位置：`app/interface/`，封装与外部模型/视频服务的交互，统一调用与返回结构。
 - 适配器注册：`resolve_adapter(name)` 返回具体适配器（见 `app/interface/registry.py`）。
-- Qwen（ModelScope）：`app/interface/qwen.py` 提供文生图与以图编辑。
 - Flux（ModelScope）：`app/interface/flux.py` 提供文生图。
 - MajicFlus（ModelScope）：`app/interface/majicflus.py` 提供文生图。
 - Sora2（视频）：`app/interface/sora2.py` 提供视频生成与查询，现采用 OpenAI 标准接口 `v1/chat/completions` 的流式生成：

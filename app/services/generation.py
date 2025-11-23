@@ -15,7 +15,7 @@ from app.services.persistence import (
     update_job_fields,
     get_provider_by_name,
 )
-from app.services.storage import placeholder_output
+from app.services.storage import placeholder_output, save_data_url_image
 from app.services.store import MemoryStore
 from app.interface.registry import OpenAIImageAdapter, resolve_adapter
 from app.services.metrics import metrics
@@ -27,11 +27,11 @@ async def simulate_generation(
     """Generation orchestrator for demo environment.
 
     - Maintains the queued -> running -> completed lifecycle with progress ticks.
-    - When provider is a configured Qwen channel and kind is text_to_image,
-      delegates the actual image generation to ModelScope Qwen API via
-      `app.interface.qwen`, using provider.base_url + provider.api_token.
-    - For other providers, falls back to a simple mocked provider_response
-      and placeholder output, while keeping the Job/Asset contract stable.
+    - When provider capabilities include image generation/editing, delegate to
+      the configured adapter (OpenAI-style or other ModelScope providers) while
+      streaming local progress updates.
+    - Otherwise fall back to a mocked provider_response and placeholder output,
+      keeping the Job/Asset contract stable.
     """
 
     # ensure session per task
@@ -42,9 +42,9 @@ async def simulate_generation(
     metrics.record_transition(JobStatus.QUEUED, JobStatus.RUNNING)
     metrics.mark_started(job.id)
 
-    # If this is a Qwen text-to-image job and channel is configured,
-    # kick off provider call in a background thread while we stream progress.
-    qwen_task: asyncio.Task | None = None
+    # If this is a real provider-backed job, kick off the provider call in a
+    # background thread while we stream progress.
+    provider_task: asyncio.Task | None = None
     sora_task: asyncio.Task | None = None
     provider_progress_val: float = 1.0
     loop = asyncio.get_running_loop()
@@ -84,13 +84,11 @@ async def simulate_generation(
         supports_image_url = provider.name in {"sora", "nano-banana-2"} or (
             isinstance(adapter, OpenAIImageAdapter) and image_api_style == "chat-completions"
         )
-        use_edit = bool(primary_image) and (
-            supports_image_edit or (job.model or "").startswith("qwen-image-edit") or ("edit" in (job.model or ""))
-        )
+        use_edit = bool(primary_image) and (supports_image_edit or ("edit" in (job.model or "")))
         model_to_use = _select_model(provider.models or [], job.model, use_edit)
 
         if use_edit and hasattr(adapter, "edit_image"):
-            qwen_task = asyncio.create_task(
+            provider_task = asyncio.create_task(
                 asyncio.to_thread(
                     adapter.edit_image,
                     src_urls if isinstance(src_urls, list) and src_urls else (src_url or ""),
@@ -103,7 +101,7 @@ async def simulate_generation(
                 )
             )
         elif supports_image_url:
-            qwen_task = asyncio.create_task(
+            provider_task = asyncio.create_task(
                 asyncio.to_thread(
                     adapter.generate_image,
                     job.prompt,
@@ -116,7 +114,7 @@ async def simulate_generation(
                 )
             )
         else:
-            qwen_task = asyncio.create_task(
+            provider_task = asyncio.create_task(
                 asyncio.to_thread(
                     adapter.generate_image,
                     job.prompt,
@@ -210,12 +208,12 @@ async def simulate_generation(
         # If we dispatched a provider task, wait for completion and capture provider response.
         image_url: str | None = None
         provider_response: dict | None = None
-        if qwen_task is not None:
+        if provider_task is not None:
             try:
-                image_url, provider_response = await qwen_task
+                image_url, provider_response = await provider_task
             except Exception as exc:  # pragma: no cover - external provider guard
                 provider_response = {
-                    "provider": "qwen",
+                    "provider": provider.name if provider else "provider",
                     "status": "failed",
                     "error": str(exc),
                 }
@@ -293,6 +291,11 @@ async def simulate_generation(
             await update_job_fields(session, job.id, params=params.dict() if hasattr(params, "dict") else params)
 
         normalized_url = _normalize_output_url(image_url)
+        if normalized_url and normalized_url.startswith("data:image/"):
+            try:
+                normalized_url = save_data_url_image(job.id, normalized_url)
+            except Exception:
+                pass
 
         if attempted_external and not normalized_url:
             err_payload = provider_response

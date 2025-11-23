@@ -59,6 +59,17 @@ async def ensure_database_and_schema() -> None:
                 await conn.execute(text("ALTER TABLE public.jobs ALTER COLUMN error TYPE TEXT"))
             except Exception:
                 pass
+        for stmt in (
+            "ALTER TABLE assets ALTER COLUMN url TYPE TEXT",
+            "ALTER TABLE assets ALTER COLUMN preview_url TYPE TEXT",
+        ):
+            try:
+                await conn.execute(text(stmt))
+            except Exception:
+                try:
+                    await conn.execute(text(stmt.replace("assets", "public.assets")))
+                except Exception:
+                    pass
     try:
         async with SessionLocal() as s:
             await ensure_default_providers(s)

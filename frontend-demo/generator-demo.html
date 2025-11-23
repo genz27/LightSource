@@ -91,7 +91,7 @@
               <div>
                 <label for="mode">Mode</label>
                 <select id="mode">
-                  <option value="image">Text to image (qwen-image)</option>
+                  <option value="image">Text to image (gpt-image-1)</option>
                   <option value="text-video">Text to video (sora2-video)</option>
                   <option value="image-video">Image to video (sora2-video)</option>
                 </select>
@@ -100,7 +100,7 @@
                 <label for="model">Model</label>
                 <select id="model">
                   <option selected>Select model matching the mode</option>
-                  <option>qwen-image (text to image)</option>
+                  <option>gpt-image-1 (text to image)</option>
                   <option>sora2-video (text to video)</option>
                   <option>sora2-video (image to video)</option>
                 </select>
@@ -187,7 +187,7 @@
         <div class="history">
           <div class="history-item">
             <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;">
-              <span>job_231 - qwen-image</span><span style="color:var(--muted);">Completed</span>
+              <span>job_231 - gpt-image-1</span><span style="color:var(--muted);">Completed</span>
             </div>
             <div style="color:var(--muted);">Prompt: Neon alley with rain | Public: yes</div>
           </div>
@@ -199,7 +199,7 @@
           </div>
           <div class="history-item">
             <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;">
-              <span>job_229 - qwen-image</span><span style="color:var(--muted);">Queued</span>
+              <span>job_229 - gpt-image-1</span><span style="color:var(--muted);">Queued</span>
             </div>
             <div style="color:var(--muted);">Prompt: Forest time-lapse | Resolution: 1024x1024</div>
           </div>
@@ -237,7 +237,7 @@
       let pollTimer = null;
 
       const modelGroups = {
-        image: [{ value: "qwen-image", label: "qwen-image (text to image)" }],
+        image: [{ value: "gpt-image-1", label: "gpt-image-1 (text to image)" }],
         "text-video": [
           { value: "sora2-video", label: "sora2-video (text to video)" },
         ],
@@ -336,7 +336,7 @@
         const prompt = (promptInput.value || "").trim();
         const model =
           modelSelect.value ||
-          (mode === "image" ? "qwen-image" : mode === "image-video" || mode === "text-video" ? "sora2-video" : "");
+          (mode === "image" ? "gpt-image-1" : mode === "image-video" || mode === "text-video" ? "sora2-video" : "");
 
         if (!prompt) {
           alert("Prompt cannot be empty");

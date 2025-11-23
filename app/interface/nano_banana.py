@@ -6,7 +6,7 @@ from typing import Any, Dict, Iterable, List, Tuple
 
 import requests
 
-DEFAULT_BASE_URL = "https://api.nano-banana-2.example"
+DEFAULT_BASE_URL = "https://api.airgzn.top"
 DEFAULT_MODEL = "gemini-3-pro-image-preview"
 
 
@@ -27,13 +27,20 @@ def _normalize_base_url(base_url: str | None) -> str:
     return url
 
 
-def _build_content(prompt: str, image_url: str | None) -> List[Dict[str, Any]] | str:
-    if image_url:
-        return [
-            {"type": "text", "text": prompt},
-            {"type": "image_url", "image_url": {"url": image_url}},
-        ]
-    return prompt
+_DATA_URL_RE = re.compile(r"data:image/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\r\n]+")
+_HTTP_URL_RE = re.compile(r"https?://\S+")
+
+
+def _find_media_url(text: str) -> str | None:
+    if not isinstance(text, str):
+        return None
+    data_match = _DATA_URL_RE.search(text)
+    if data_match:
+        return data_match.group(0)
+    http_match = _HTTP_URL_RE.search(text)
+    if http_match:
+        return http_match.group(0)
+    return None
 
 
 def _clean_url(url_val: str) -> str:
@@ -54,10 +61,9 @@ def _extract_url_from_parts(parts: Iterable[Any]) -> str | None:
                 return _clean_url(image_entry)
         if part.get("type") == "text":
             text = part.get("text")
-            if isinstance(text, str):
-                match = re.search(r"https?://\S+", text)
-                if match:
-                    return _clean_url(match.group(0))
+            url_val = _find_media_url(text)
+            if url_val:
+                return _clean_url(url_val)
     return None
 
 
@@ -70,9 +76,9 @@ def _extract_image_url(message: dict[str, Any]) -> str:
             return _clean_url(url_val)
     # Legacy single string content
     if isinstance(content, str):
-        match = re.search(r"https?://\S+", content)
-        if match:
-            return _clean_url(match.group(0))
+        url_val = _find_media_url(content)
+        if url_val:
+            return _clean_url(url_val)
     raise RuntimeError("provider returned no image URL in message content")
 
 
@@ -91,9 +97,9 @@ def _extract_from_stream(resp: requests.Response) -> Tuple[str | None, list[dict
         try:
             obj = json.loads(payload)
         except Exception:
-            match = re.search(r"https?://\S+", payload)
-            if match:
-                last_url = _clean_url(match.group(0))
+            url_val = _find_media_url(payload)
+            if url_val:
+                last_url = _clean_url(url_val)
             continue
         if isinstance(obj, dict):
             chunks.append(obj)
@@ -105,14 +111,23 @@ def _extract_from_stream(resp: requests.Response) -> Tuple[str | None, list[dict
             if isinstance(content, list):
                 url_val = _extract_url_from_parts(content)
                 if url_val:
-                    last_url = url_val
+                    last_url = _clean_url(url_val)
                     break
             if isinstance(content, str):
-                match = re.search(r"https?://\S+", content)
-                if match:
-                    last_url = _clean_url(match.group(0))
+                url_val = _find_media_url(content)
+                if url_val:
+                    last_url = _clean_url(url_val)
                     break
     return last_url, chunks
+
+
+def _build_content(prompt: str, image_url: str | None) -> List[Dict[str, Any]] | str:
+    if image_url:
+        return [
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": image_url}},
+        ]
+    return prompt
 
 
 def generate_image(

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import base64
+import re
 from pathlib import Path
 from typing import Optional
 from app.schemas import AssetOut
@@ -12,6 +14,43 @@ from app.config import get_settings
 
 def ensure_storage_dir(base: Path) -> None:
     base.mkdir(parents=True, exist_ok=True)
+
+
+_DATA_URL_RE = re.compile(r"^data:image/([a-zA-Z0-9.+-]+);base64,(.+)$", re.DOTALL)
+
+
+def save_data_url_image(job_id: str, data_url: str, *, filename: str = "output") -> str:
+    """Persist a data URL image to storage and return the static media URL."""
+
+    match = _DATA_URL_RE.match((data_url or "").strip())
+    if not match:
+        raise ValueError("invalid data url")
+
+    mime = match.group(1).lower()
+    b64_payload = match.group(2).strip()
+    payload = base64.b64decode(b64_payload)
+
+    ext = "png"
+    if "jpeg" in mime or mime == "jpg":
+        ext = "jpg"
+    elif "gif" in mime:
+        ext = "gif"
+    elif "webp" in mime:
+        ext = "webp"
+    elif "bmp" in mime:
+        ext = "bmp"
+    elif "tiff" in mime:
+        ext = "tiff"
+
+    settings = get_settings()
+    base = Path(settings.storage_base)
+    ensure_storage_dir(base / job_id)
+    dest = base / job_id / f"{filename}.{ext}"
+    with dest.open("wb") as f:
+        f.write(payload)
+
+    rel_path = f"{job_id}/{filename}.{ext}"
+    return f"/media/{rel_path}"
 
 
 def _validate_image_upload(upload: UploadFile, max_bytes: int) -> bytes:
