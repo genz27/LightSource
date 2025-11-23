@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="700" viewBox="0 0 1100 700" role="img" aria-label="Image and edit routing flow">
+  <style>
+    .box { fill: #f2f6ff; stroke: #1d4ed8; stroke-width: 2; rx: 12; }
+    .decision { fill: #e9f6ec; stroke: #15803d; stroke-width: 2; rx: 12; }
+    .note { fill: #fff7e6; stroke: #d97706; stroke-width: 2; rx: 12; }
+    .text { font: 16px sans-serif; fill: #111827; }
+    .small { font: 14px sans-serif; fill: #111827; }
+    .caption { font: 14px monospace; fill: #374151; }
+  </style>
+  <rect width="1100" height="700" fill="#ffffff" />
+
+  <rect class="box" x="430" y="30" width="240" height="70" />
+  <text class="text" x="470" y="72">Job请求 (text_to_image)</text>
+
+  <rect class="decision" x="310" y="140" width="480" height="70" />
+  <text class="text" x="330" y="185">检查provider能力: image / image-edit</text>
+
+  <line x1="550" y1="100" x2="550" y2="140" stroke="#111827" stroke-width="3" />
+  <polygon points="550,140 540,125 560,125" fill="#111827" />
+  <text class="small" x="560" y="125">读取provider & adapter</text>
+
+  <line x1="550" y1="210" x2="550" y2="270" stroke="#111827" stroke-width="3" />
+  <polygon points="550,270 540,255 560,255" fill="#111827" />
+  <text class="small" x="400" y="245">job.params.extras 里有 source_image_url(s)?</text>
+
+  <rect class="note" x="120" y="270" width="260" height="70" />
+  <text class="text" x="150" y="312">无 -&gt; 生图</text>
+  <line x1="250" y1="340" x2="250" y2="430" stroke="#111827" stroke-width="3" />
+  <polygon points="250,430 240,415 260,415" fill="#111827" />
+  <rect class="box" x="130" y="430" width="240" height="90" />
+  <text class="small" x="150" y="470">adapter.generate_image</text>
+  <text class="caption" x="150" y="495">(OpenAI / sora-image / nano-banana)</text>
+
+  <rect class="note" x="680" y="270" width="260" height="70" />
+  <text class="text" x="710" y="312">有 -&gt; 可能改图</text>
+  <line x1="810" y1="340" x2="810" y2="430" stroke="#111827" stroke-width="3" />
+  <polygon points="810,430 800,415 820,415" fill="#111827" />
+  <text class="small" x="690" y="395">capability含 image-edit ?</text>
+  <rect class="box" x="690" y="430" width="240" height="90" />
+  <text class="small" x="710" y="470">adapter.edit_image</text>
+  <text class="caption" x="710" y="495">(OpenAI image-edit / Qwen)</text>
+
+  <rect class="note" x="410" y="330" width="280" height="70" />
+  <text class="small" x="430" y="370">有图但无edit能力 -&gt; 参考图生图</text>
+  <line x1="550" y1="400" x2="550" y2="520" stroke="#111827" stroke-width="3" />
+  <polygon points="550,520 540,505 560,505" fill="#111827" />
+  <rect class="box" x="430" y="520" width="240" height="90" />
+  <text class="small" x="450" y="560">adapter.generate_image</text>
+  <text class="caption" x="450" y="585">(携带image_url走流式/非流式)</text>
+
+  <text class="small" x="60" y="650">OpenAI 与 sora-image 均走 v1/chat/completions 格式; presence of image_url</text>
+  <text class="small" x="60" y="675">触发 edit_image, 否则 generate_image. capabilities 中含 image-edit 才允许改图.</text>
+</svg>
