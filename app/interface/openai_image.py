@@ -373,23 +373,40 @@ def generate_image(
     api_style: str | None = None,
 ) -> Tuple[str, Dict[str, Any]]:
     endpoint = _resolve_chat_endpoint(base_url)
+    content = _build_content(prompt, image_url)
     payload: Dict[str, Any] = {
         "model": model or DEFAULT_MODEL,
         "messages": [
             {
                 "role": "user",
-                "content": prompt,
+                "content": content,
             }
         ],
-        "stream": False,
     }
-    _dbg("chat_api_request", {"url": endpoint, "model": payload["model"], "stream": False, "prompt": prompt})
+    if temperature is not None:
+        payload["temperature"] = temperature
+    if top_p is not None:
+        payload["top_p"] = top_p
+    payload["stream"] = bool(stream) if stream is not None else False
+    if stream_options:
+        payload["stream_options"] = stream_options
+    _dbg(
+        "chat_api_request",
+        {
+            "url": endpoint,
+            "model": payload["model"],
+            "stream": payload["stream"],
+            "prompt": prompt,
+            "has_image": bool(image_url),
+        },
+    )
     t0 = time.perf_counter()
     response = requests.post(
         endpoint,
         headers=_headers(api_key),
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
         timeout=120,
+        stream=payload["stream"],
     )
     response.raise_for_status()
     try:
@@ -403,35 +420,43 @@ def generate_image(
         "request": payload,
     }
 
-    data = response.json()
-    try:
-        _dbg("chat_api_response_text", response.text[:1000])
-    except Exception:
-        pass
-    choices = data.get("choices") or []
-    if not choices:
-        raise RuntimeError("provider returned no choices")
-    message = choices[0].get("message") or {}
-    try:
-        _dbg("chat_response_shape", {"choices": len(choices), "message_keys": list(message.keys())})
-    except Exception:
-        pass
-    try:
-        image_out = _extract_image_url(message)
-    except Exception:
-        alt = _search_media_in_obj(data)
-        image_out = _clean_url(alt) if isinstance(alt, str) else None
+    if payload["stream"]:
+        image_out, chunks = _extract_from_stream(response)
+        provider_response["raw"] = {"chunks": chunks}
+        if not image_out:
+            raise RuntimeError("provider returned no image URL in stream")
+    else:
+        data = response.json()
+        try:
+            _dbg("chat_api_response_text", response.text[:1000])
+        except Exception:
+            pass
+        choices = data.get("choices") or []
+        if not choices:
+            raise RuntimeError("provider returned no choices")
+        message = choices[0].get("message") or {}
+        try:
+            _dbg("chat_response_shape", {"choices": len(choices), "message_keys": list(message.keys())})
+        except Exception:
+            pass
+        try:
+            image_out = _extract_image_url(message)
+        except Exception:
+            alt = _search_media_in_obj(data)
+            image_out = _clean_url(alt) if isinstance(alt, str) else None
 
-    provider_response["raw"] = data
+        provider_response["raw"] = data
     try:
         if _debug_enabled():
             h = _headers(api_key)
             sh = {k: ("Bearer ***" if k.lower() == "authorization" else v) for k, v in h.items()}
-            dbg = {
+            dbg: Dict[str, Any] = {
                 "request": {"method": "POST", "url": endpoint, "headers": sh, "body": payload},
-                "response": {"status_code": response.status_code, "headers": dict(response.headers), "text": response.text[:2000]},
+                "response": {"status_code": response.status_code, "headers": dict(response.headers)},
                 "duration_ms": int((time.perf_counter() - t0) * 1000),
             }
+            if not payload["stream"]:
+                dbg["response"]["text"] = response.text[:2000]
             if isinstance(provider_response["raw"], dict):
                 provider_response["raw"]["debug"] = dbg
     except Exception:
