@@ -17,15 +17,14 @@
               placeholder="Describe what you want to create..."
               rows="4"
               required
+              :disabled="isGenerating"
             ></textarea>
             <div class="input-hint">Be descriptive and specific for better results</div>
           </div>
 
-          
-
           <div class="form-group">
             <label>Mode</label>
-            <select v-model="form.mode">
+            <select v-model="form.mode" :disabled="isGenerating">
               <option value="text_to_image">Text → Image</option>
               <option value="image_to_image">Image → Image</option>
               <option value="text_to_video">Text → Video</option>
@@ -35,7 +34,7 @@
 
           <div class="form-group">
             <label>Model</label>
-            <select v-model="selectedModelKey">
+            <select v-model="selectedModelKey" :disabled="isGenerating">
               <option v-for="opt in currentModelOptions" :key="opt.key" :value="opt.key">{{ opt.displayName }}</option>
               <option v-if="!currentModelOptions.length" disabled>No models available</option>
             </select>
@@ -120,14 +119,15 @@
               <button 
                 type="submit" 
                 class="pill accent"
-                :disabled="(((form.mode === 'text_to_video') || (form.mode === 'image_to_video')) && walletBalance !== null && walletBalance < estimatedCost)"
+                :disabled="isGenerating || (((form.mode === 'text_to_video') || (form.mode === 'image_to_video')) && walletBalance !== null && walletBalance < estimatedCost)"
               >
-                Generate
+                {{ isGenerating ? 'Generating...' : 'Generate' }}
               </button>
             
             <button 
               type="button" 
               class="ghost"
+              :disabled="isGenerating"
               @click="resetForm"
             >
               Reset
@@ -400,6 +400,7 @@ interface GenTask { id: string; status: string; progress: number; model: string;
 const tasks = ref<GenTask[]>([])
 const pollTimers: Record<string, number> = {}
 const lastCharge = ref<number>(0)
+const isGenerating = ref(false)
 const isImageMode = computed(() => form.mode === 'text_to_image' || form.mode === 'image_to_image')
 const sourceImagePreview = ref<string | null>(null)
 const sourceImageText = ref<string>('')
@@ -620,6 +621,7 @@ const clearAllSources = () => { sourceImageFiles.value = []; sourceFilePreviews.
 watch(sourceImageText, (val) => { const v = (val || '').trim(); sourceImagePreview.value = v ? v : null })
 
 const generateContent = async () => {
+  isGenerating.value = true;
   try {
     const activeModel = selectedModelOption.value?.model || form.model
     const activeProvider = selectedProvider.value
@@ -759,6 +761,8 @@ const generateContent = async () => {
       alert(typeof detail === 'string' ? detail : 'Insufficient balance. Cannot generate content.')
     }
     
+  } finally {
+    isGenerating.value = false;
   }
 }
 

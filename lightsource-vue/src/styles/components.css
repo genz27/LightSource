@@ -1,0 +1,251 @@
+/* Common Component Styles */
+.pill {
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--pill);
+  color: var(--text);
+  padding: 10px 18px;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  display: inline-block;
+  text-align: center;
+  border: none;
+  outline: none;
+  font-family: inherit;
+}
+
+.pill:hover:not(:disabled) {
+  border-color: #2f2f33;
+  background: #25252a;
+  transform: translateY(-1px);
+}
+
+.pill:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.pill.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #1a1a1a;
+  font-weight: 700;
+}
+
+.pill.accent {
+  background: var(--accent);
+  color: #1a1a1a;
+  border: none;
+  font-weight: 700;
+}
+
+.pill.accent:hover:not(:disabled) {
+  background: #e5c985;
+  transform: translateY(-1px);
+}
+
+.pill.sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.ghost {
+  color: var(--muted);
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  display: inline-block;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  font-family: inherit;
+}
+
+.ghost:hover:not(:disabled) {
+  border-color: var(--border);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ghost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.form-group {
+  margin-bottom: 24px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  background: #111116;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 15px;
+  transition: border-color 0.2s ease;
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.form-group input:disabled,
+.form-group select:disabled,
+.form-group textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.input-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.error {
+  color: #f44336;
+  padding: 12px;
+  background: rgba(244, 67, 54, 0.1);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.success {
+  color: #4caf50;
+  padding: 12px;
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.monospace {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* Responsive Utilities */
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .pill,
+  .ghost {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+  
+  .pill.sm {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+}
+
+/* Loading States */
+.loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid transparent;
+  border-top: 2px solid var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Common Card Styles */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Badge Styles */
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--pill);
+  color: var(--text);
+}
+
+.badge.ghost {
+  background: transparent;
+  color: var(--muted);
+}
+
+.badge.success {
+  background: #16a34a;
+  color: white;
+  border-color: #16a34a;
+}
+
+.badge.warning {
+  background: #eab308;
+  color: black;
+  border-color: #eab308;
+}
+
+.badge.error {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
+}

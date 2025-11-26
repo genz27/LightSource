@@ -1,7 +1,7 @@
 <template>
   <div class="auth-bg">
-    <video v-if="bgVideo" :src="bgVideo" autoplay loop muted playsinline></video>
-    <img v-else-if="bgImage" :src="bgImage" alt="background" />
+    <img v-if="bgImage" :src="bgImage" alt="background" />
+    <img v-else src="@/assets/auth-bg.jpg" alt="background" />
     <div class="auth-bg-overlay"></div>
   </div>
   <div class="auth-container">
