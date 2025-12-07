@@ -1,4 +1,4 @@
-# LightSource
+# 已经废弃
 
 简洁的 AI 媒资生成与管理示例：后端 FastAPI + SQLAlchemy，前端 Vue 3 + Pinia + Vite。涵盖登录、任务、资源、提供商、管理员、钱包与偏好设置，采用 HTTP 轮询与静态文件存储。
 
